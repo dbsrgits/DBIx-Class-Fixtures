@@ -1,7 +1,8 @@
 #!perl
 
 use DBIx::Class::Fixtures;
-use Test::More tests => 3;
+use Test::More tests => 9;
+use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper; 
