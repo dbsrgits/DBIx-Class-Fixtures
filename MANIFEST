@@ -1,0 +1,6 @@
+Changes
+MANIFEST
+Makefile.PL
+README
+lib/DBIx/Class/Fixtures.pm
+t/00-load.t
