@@ -4,12 +4,15 @@ use strict;
 use warnings;
 
 use DBIx::Class::Exception;
+use DBIx::Class::Fixtures::Schema;
 use Class::Accessor;
 use Path::Class qw(dir file);
 use Config::Any::JSON;
 use Data::Dump::Streamer;
+use Data::Visitor::Callback;
 use File::Slurp;
 use File::Path;
+use File::Copy::Recursive qw/dircopy/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 
@@ -304,24 +307,22 @@ sub dump_object {
 sub _generate_schema {
   my $self = shift;
   my $params = shift || {};
-
   require DBI;
   $self->msg("\ncreating schema");
   #   die 'must pass version param to generate_schema_from_ddl' unless $params->{version};
 
-  my $dbh;
-  unless ($dbh = DBI->connect(@{$params->{connection_details}})) {
+  my $pre_schema;
+  my $connection_details = $params->{connection_details};
+  unless( $pre_schema = DBIx::Class::Fixtures::Schema->connect(@{$connection_details}) ) {
     return DBIx::Class::Exception->throw('connection details not valid');
   }
-  my $connection_details = $params->{connection_details};
+  my @tables = map { $pre_schema->source($_)->from }$pre_schema->sources;
+  my $dbh = $pre_schema->storage->dbh;
 
   # clear existing db
   $self->msg("- clearing DB of existing tables");
-  $dbh->do('SET foreign_key_checks=0');
-  my $sth = $dbh->prepare('SHOW TABLES');
-  $sth->execute;
-  my $rows = $sth->fetchall_arrayref;
-  $dbh->do('drop table ' . $_->[0]) for (@{$rows});
+  eval { $dbh->do('SET foreign_key_checks=0') };
+  $dbh->do('drop table ' . $_) for (@tables);
 
   # import new ddl file to db
   my $ddl_file = $params->{ddl};
@@ -337,7 +338,6 @@ sub _generate_schema {
       eval { $dbh->do($_) or warn "SQL was:\n $_"};
 	  if ($@) { die "SQL was:\n $_\n$@"; }
   }
-  $dbh->do('SET foreign_key_checks=1');
   $self->msg("- finished importing DDL into DB");
 
   # load schema object from our new DB
@@ -370,7 +370,7 @@ sub populate {
   my $ddl_file;
   my $dbh;  
   if ($params->{ddl} && $params->{connection_details}) {
-    my $ddl_file = file($params->{ddl});
+    $ddl_file = file($params->{ddl});
     unless (-e $ddl_file) {
       return DBIx::Class::Exception->throw('DDL does not exist at ' . $ddl_file);
     }
@@ -384,8 +384,7 @@ sub populate {
   }
 
   my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => $params->{connection_details} });
-  $self->msg("importing fixtures");
-
+  $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
 
   my $version_file = file($fixture_dir, '_dumper_version');
@@ -395,12 +394,12 @@ sub populate {
 
   if (-e $tmp_fixture_dir) {
     $self->msg("- deleting existing temp directory $tmp_fixture_dir");
-    system("rm -rf $tmp_fixture_dir");
+    $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
-  system("cp -r $fixture_dir $tmp_fixture_dir");
+  dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for $schema->sources;
 
-  $schema->storage->dbh->do('SET foreign_key_checks=0');
+  eval { $schema->storage->dbh->do('SET foreign_key_checks=0') };
   my $fixup_visitor;
   my %callbacks;
   if ($params->{datetime_relative_to}) {
@@ -434,7 +433,7 @@ sub populate {
   $self->msg("- fixtures imported");
   $self->msg("- cleaning up");
   $tmp_fixture_dir->rmtree;
-  $schema->storage->dbh->do('SET foreign_key_checks=1');
+  eval { $schema->storage->dbh->do('SET foreign_key_checks=1') };
 }
 
 sub msg {
