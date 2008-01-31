@@ -118,7 +118,8 @@ sub populate_schema {
         [ 2, 1, "Forkful of bees", 2001 ],
         [ 3, 1, "Caterwaulin' Blues", 1997 ],
         [ 4, 2, "Generic Manufactured Singles", 2001 ],
-        [ 5, 3, "Come Be Depressed With Us", 1998 ],
+        [ 5, 2, "We like girls and stuff", 2003 ],
+        [ 6, 3, "Come Be Depressed With Us", 1998 ],
     ]);
 
     $schema->populate('Tag', [

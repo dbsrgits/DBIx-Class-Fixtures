@@ -269,7 +269,7 @@ sub dump_object {
         #		use Data::Dumper; print ' -- ' . Dumper($c_params{set}, $rule->{fetch}) if ($rule && $rule->{fetch});
         $c_params{set} = merge( $c_params{set}, $rule) if ($rule && $rule->{fetch});
         #		use Data::Dumper; print ' -- ' . Dumper(\%c_params) if ($rule && $rule->{fetch});
-        dump_object($_, \%c_params) foreach $related_rs->all;	  
+        $self->dump_object($_, \%c_params) foreach $related_rs->all;	  
       }	
     }
   }
@@ -297,7 +297,7 @@ sub dump_object {
     $related_rs = $related_rs->search($fetch->{cond}, { join => $fetch->{join} }) if ($fetch->{cond});
     $related_rs = $related_rs->search({}, { rows => $fetch->{quantity} }) if ($fetch->{quantity} && $fetch->{quantity} ne 'all');
     $related_rs = $related_rs->search({}, { order_by => $fetch->{order_by} }) if ($fetch->{order_by});
-    dump_object($_, { %{$params}, set => $fetch }) foreach $related_rs->all;
+    $self->dump_object($_, { %{$params}, set => $fetch }) foreach $related_rs->all;
   }
 }
 
