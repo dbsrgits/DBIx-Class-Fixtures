@@ -91,6 +91,23 @@ sub deploy_schema {
     close IN;
     ($schema->storage->dbh->do($_) || print "Error on SQL: $_\n") for split(/;\n/, $sql);
 }
+ 
+
+=head2 clear_schema
+
+  DBICTest->clear_schema( $schema );
+
+=cut
+
+sub clear_schema {
+    my $self = shift;
+    my $schema = shift;
+
+    foreach my $class ($schema->sources) {
+      $schema->resultset($class)->delete;
+    }
+}
+
 
 =head2 populate_schema
 
