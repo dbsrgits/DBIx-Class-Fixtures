@@ -301,6 +301,142 @@ sub dump_object {
   }
 }
 
+sub _generate_schema {
+  my $self = shift;
+  my $params = shift || {};
+
+  require DBI;
+  $self->msg("\ncreating schema");
+  #   die 'must pass version param to generate_schema_from_ddl' unless $params->{version};
+
+  my $dbh;
+  unless ($dbh = DBI->connect(@{$params->{connection_details}})) {
+    return DBIx::Class::Exception->throw('connection details not valid');
+  }
+  my $connection_details = $params->{connection_details};
+
+  # clear existing db
+  $self->msg("- clearing DB of existing tables");
+  $dbh->do('SET foreign_key_checks=0');
+  my $sth = $dbh->prepare('SHOW TABLES');
+  $sth->execute;
+  my $rows = $sth->fetchall_arrayref;
+  $dbh->do('drop table ' . $_->[0]) for (@{$rows});
+
+  # import new ddl file to db
+  my $ddl_file = $params->{ddl};
+  $self->msg("- deploying schema using $ddl_file");
+  my $fh;
+  open $fh, "<$ddl_file" or die ("Can't open DDL file, $ddl_file ($!)");
+  my @data = split(/\n/, join('', <$fh>));
+  @data = grep(!/^--/, @data);
+  @data = split(/;/, join('', @data));
+  close($fh);
+  @data = grep { $_ && $_ !~ /^-- / } @data;
+  for (@data) {
+      eval { $dbh->do($_) or warn "SQL was:\n $_"};
+	  if ($@) { die "SQL was:\n $_\n$@"; }
+  }
+  $dbh->do('SET foreign_key_checks=1');
+  $self->msg("- finished importing DDL into DB");
+
+  # load schema object from our new DB
+  $self->msg("- loading fresh DBIC object from DB");
+  my $schema = DBIx::Class::Fixtures::Schema->connect(@{$connection_details});
+
+  # manually set the version then set DB version to it (upgrade)
+#   $Takkle::SchemaPopulate::VERSION = $params->{version};
+#   $schema->upgrade(); # set version number  
+  return $schema;
+}
+
+sub populate {
+  my $self = shift;
+  my ($params) = @_;
+  unless (ref $params eq 'HASH') {
+    return DBIx::Class::Exception->throw('first arg to populate must be hash ref');
+  }
+
+  foreach my $param (qw/directory/) {
+    unless ($params->{$param}) {
+      return DBIx::Class::Exception->throw($param . ' param not specified');
+    }
+  }
+  my $fixture_dir = dir($params->{directory});
+  unless (-e $fixture_dir) {
+    return DBIx::Class::Exception->throw('fixture directory does not exist at ' . $fixture_dir);
+  }
+
+  my $ddl_file;
+  my $dbh;  
+  if ($params->{ddl} && $params->{connection_details}) {
+    my $ddl_file = file($params->{ddl});
+    unless (-e $ddl_file) {
+      return DBIx::Class::Exception->throw('DDL does not exist at ' . $ddl_file);
+    }
+    unless (ref $params->{connection_details} eq 'ARRAY') {
+      return DBIx::Class::Exception->throw('connection details must be an arrayref');
+    }
+  } elsif ($params->{schema}) {
+    return DBIx::Class::Exception->throw('passing a schema is not supported at the moment');
+  } else {
+    return DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
+  }
+
+  my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => $params->{connection_details} });
+  $self->msg("importing fixtures");
+
+  my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
+
+  my $version_file = file($fixture_dir, '_dumper_version');
+  unless (-e $version_file) {
+#     return DBIx::Class::Exception->throw('no version file found');
+  }
+
+  if (-e $tmp_fixture_dir) {
+    $self->msg("- deleting existing temp directory $tmp_fixture_dir");
+    system("rm -rf $tmp_fixture_dir");
+  }
+  $self->msg("- creating temp dir");
+  system("cp -r $fixture_dir $tmp_fixture_dir");
+
+  $schema->storage->dbh->do('SET foreign_key_checks=0');
+  my $fixup_visitor;
+  my %callbacks;
+  if ($params->{datetime_relative_to}) {
+    $callbacks{'DateTime::Duration'} = sub {
+      $params->{datetime_relative_to}->clone->add_duration($_);
+    };
+  } else {
+    $callbacks{'DateTime::Duration'} = sub {
+      DateTime->today->add_duration($_)
+    };
+  }
+  $callbacks{object} ||= "visit_ref";	
+  $fixup_visitor = new Data::Visitor::Callback(%callbacks);
+
+  foreach my $source (sort $schema->sources) {
+    $self->msg("- adding " . $source);
+    my $rs = $schema->resultset($source);
+    my $source_dir = dir($tmp_fixture_dir, lc($rs->result_source->from));
+    next unless (-e $source_dir);
+    while (my $file = $source_dir->next) {
+      next unless ($file =~ /\.fix$/);
+      next if $file->is_dir;
+      my $contents = $file->slurp;
+      my $HASH1;
+      eval($contents);
+      $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
+      $rs->find_or_create($HASH1);
+    }
+  }
+
+  $self->msg("- fixtures imported");
+  $self->msg("- cleaning up");
+  $tmp_fixture_dir->rmtree;
+  $schema->storage->dbh->do('SET foreign_key_checks=1');
+}
+
 sub msg {
   my $self = shift;
   my $subject = shift || return;
