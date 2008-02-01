@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use DBIx::Class::Exception;
-use DBIx::Class::Fixtures::Schema;
 use Class::Accessor;
 use Path::Class qw(dir file);
 use Config::Any::JSON;
@@ -18,7 +17,7 @@ use Data::Dumper;
 
 use base qw(Class::Accessor);
 
-__PACKAGE__->mk_accessors(qw(config_dir _inherited_attributes debug));
+__PACKAGE__->mk_accessors(qw(config_dir _inherited_attributes debug schema_class ));
 
 =head1 VERSION
 
@@ -311,9 +310,13 @@ sub _generate_schema {
   $self->msg("\ncreating schema");
   #   die 'must pass version param to generate_schema_from_ddl' unless $params->{version};
 
+  my $schema_class = $self->schema_class || "DBIx::Class::Fixtures::SchemaVersioned";
+  eval "require $schema_class";
+  die $@ if $@;
+
   my $pre_schema;
   my $connection_details = $params->{connection_details};
-  unless( $pre_schema = DBIx::Class::Fixtures::Schema->connect(@{$connection_details}) ) {
+  unless( $pre_schema = $schema_class->connect(@{$connection_details}) ) {
     return DBIx::Class::Exception->throw('connection details not valid');
   }
   my @tables = map { $pre_schema->source($_)->from }$pre_schema->sources;
@@ -342,11 +345,7 @@ sub _generate_schema {
 
   # load schema object from our new DB
   $self->msg("- loading fresh DBIC object from DB");
-  my $schema = DBIx::Class::Fixtures::Schema->connect(@{$connection_details});
-
-  # manually set the version then set DB version to it (upgrade)
-#   $Takkle::SchemaPopulate::VERSION = $params->{version};
-#   $schema->upgrade(); # set version number  
+  my $schema = $schema_class->connect(@{$connection_details});
   return $schema;
 }
 
@@ -362,7 +361,7 @@ sub populate {
       return DBIx::Class::Exception->throw($param . ' param not specified');
     }
   }
-  my $fixture_dir = dir($params->{directory});
+  my $fixture_dir = dir(delete $params->{directory});
   unless (-e $fixture_dir) {
     return DBIx::Class::Exception->throw('fixture directory does not exist at ' . $fixture_dir);
   }
@@ -370,7 +369,7 @@ sub populate {
   my $ddl_file;
   my $dbh;  
   if ($params->{ddl} && $params->{connection_details}) {
-    $ddl_file = file($params->{ddl});
+    $ddl_file = file(delete $params->{ddl});
     unless (-e $ddl_file) {
       return DBIx::Class::Exception->throw('DDL does not exist at ' . $ddl_file);
     }
@@ -383,7 +382,7 @@ sub populate {
     return DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
   }
 
-  my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => $params->{connection_details} });
+  my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => delete $params->{connection_details}, %{$params} });
   $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
 
@@ -439,7 +438,9 @@ sub populate {
 sub msg {
   my $self = shift;
   my $subject = shift || return;
-  return unless $self->debug;
+  my $level = shift || 1;
+
+  return unless $self->debug >= $level;
   if (ref $subject) {
 	print Dumper($subject);
   } else {
