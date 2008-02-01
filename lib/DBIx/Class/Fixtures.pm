@@ -310,7 +310,7 @@ sub _generate_schema {
   $self->msg("\ncreating schema");
   #   die 'must pass version param to generate_schema_from_ddl' unless $params->{version};
 
-  my $schema_class = $self->schema_class || "DBIx::Class::Fixtures::SchemaVersioned";
+  my $schema_class = $self->schema_class || "DBIx::Class::Fixtures::Schema";
   eval "require $schema_class";
   die $@ if $@;
 
