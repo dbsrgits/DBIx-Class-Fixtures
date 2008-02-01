@@ -16,17 +16,11 @@ our $VERSION = '1.000';
 
 =head1 NAME
 
-=head1 SYNOPSIS
+DBIx::Class::Fixtures::Versioned
 
 =head1 DESCRIPTION
 
-=head1 AUTHOR
-
-=head1 CONTRIBUTORS
-
-=head1 METHODS
-
-=head2 new
+Just ignore it for now, but it will vaguely tie in to DBIx::Class::Schema::Versioned's functionality eventually.
 
 =cut
 
@@ -36,7 +30,7 @@ sub populate {
 
   $self->schema_class("DBIx::Class::Fixtures::SchemaVersioned");
   unless ($params->{version}) {
-      return DBIx::Class::Exception->throw('You must pass a version to populate');
+    return DBIx::Class::Exception->throw('You must pass a version to populate');
   }
 
   return $self->next::method(@_);
@@ -46,14 +40,14 @@ sub _generate_schema {
   my $self = shift;
   my ($params) = @_;
 
-  my $v = $self->schema_class;
   # manually set the schema version
-  ${$v::VERSION} = $params->{version};
+  $DBIx::Class::Fixtures::SchemaVersioned::VERSION = $params->{version};
 
   my $schema = $self->next::method(@_);
+  $schema->schema_version($params->{version});
 
   # set the db version to the schema version
-  $schema->upgrade(); # set version number  
+  $schema->upgrade(); # set version number
 
   return $schema;
 }

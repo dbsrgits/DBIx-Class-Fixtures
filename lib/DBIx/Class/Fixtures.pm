@@ -29,6 +29,8 @@ our $VERSION = '1.000';
 
 =head1 NAME
 
+DBIx::Class::Fixtures
+
 =head1 SYNOPSIS
 
   use DBIx::Class::Fixtures;
@@ -124,7 +126,7 @@ sub dump {
 
   my $schema = $params->{schema};
 
-  $self->msg("generating  fixtures\n");
+  $self->msg("generating  fixtures");
   my $tmp_output_dir = dir($output_dir, '-~dump~-');
 
   unless (-e $tmp_output_dir) {
