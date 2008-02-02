@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use base qw/DBIx::Class::Fixtures/;
+use DBIx::Class::Fixtures::SchemaVersioned;
 use Class::C3;
 
 =head1 VERSION

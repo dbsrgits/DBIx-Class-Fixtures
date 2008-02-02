@@ -6,12 +6,13 @@ use warnings;
 use DBIx::Class::Exception;
 use Class::Accessor;
 use Path::Class qw(dir file);
+use File::Slurp;
 use Config::Any::JSON;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
-use File::Slurp;
 use File::Path;
 use File::Copy::Recursive qw/dircopy/;
+use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 
@@ -54,6 +55,8 @@ DBIx::Class::Fixtures
 =head1 DESCRIPTION
 
 =head1 AUTHOR
+
+Luke Saunders <luke@shadowcatsystems.co.uk>
 
 =head1 CONTRIBUTORS
 
@@ -129,14 +132,12 @@ sub dump {
   $self->msg("generating  fixtures");
   my $tmp_output_dir = dir($output_dir, '-~dump~-');
 
-  unless (-e $tmp_output_dir) {
-    $self->msg("- creating $tmp_output_dir");
-    mkdir($tmp_output_dir, 0777);
-  }else {
+  if (-e $tmp_output_dir) {
     $self->msg("- clearing existing $tmp_output_dir");
-    # delete existing fixture set
-    system("rm -rf $tmp_output_dir/*");
+    $tmp_output_dir->rmtree;
   }
+  $self->msg("- creating $tmp_output_dir");
+  $tmp_output_dir->mkpath;
 
   # write version file (for the potential benefit of populate)
   my $version_file = file($tmp_output_dir, '_dumper_version');
@@ -189,7 +190,7 @@ sub dump {
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  system("mv $tmp_output_dir/* $output_dir/");
+  move($_, dir($output_dir, $_->relative($_->parent)->stringify)) for $tmp_output_dir->children;
   if (-e $output_dir) {
     $self->msg("- clearing tmp dir $tmp_output_dir");
     # delete existing fixture set
