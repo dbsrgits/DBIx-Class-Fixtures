@@ -59,15 +59,235 @@ DBIx::Class::Fixtures
 
 =head1 DESCRIPTION
 
-=head1 AUTHOR
+Dump fixtures from source database to filesystem then import to another database (with same schema) at any time. Use as a constant dataset for running tests against or for populating development databases when impractical to use production clones. Describe fixture set using relations and conditions based on your DBIx::Class schema.
 
-Luke Saunders <luke@shadowcatsystems.co.uk>
+=head1 DEFINE YOUR FIXTURE SET
 
-=head1 CONTRIBUTORS
+Fixture sets are currently defined in .json files which must reside in your config_dir (e.g. /home/me/app/fixture_configs/a_fixture_set.json). They describe which data to pull and dump from the source database.
+
+For example:
+
+    {
+        sets: [{
+            class: 'Artist',
+            ids: ['1', '3']
+        }, {
+            class: 'Producer',
+            ids: ['5'],
+            fetch: [{
+                rel: 'artists',
+                quantity: '2'
+            }]
+        }] 
+    }
+
+This will fetch artists with primary keys 1 and 3, the producer with primary key 5 and two of producer 5's artists where 'artists' is a has_many DBIx::Class rel from Producer to Artist.
+
+=head2 sets
+
+Sets must be an array of hashes, as in the example given above. Each set defines a set of objects to be included in the fixtures. For details on valid set attributes see L</SET ATTRIBUTES> below.
+
+=head2 rules
+
+Rules place general conditions on classes. For example if whenever an artist was dumped you also wanted all of their cds dumped too, then you could use a rule to specify this. For example:
+
+    {
+        sets: [{
+            class: 'Artist',
+            ids: ['1', '3']
+        }, {
+            class: 'Producer',
+            ids: ['5'],
+            fetch: [{ 
+                rel: 'artists',
+                quantity: '2'
+            }]
+        }],
+        rules: {
+            Artist: {
+                fetch: [{
+                    rel: 'cds',
+                    quantity: 'all'
+                }]
+            }
+        }
+    }
+
+In this case all the cds of artists 1, 3 and all producer 5's artists will be dumped as well. Note that 'cds' is a has_many DBIx::Class relation from Artist to CD. This is eqivalent to:
+
+    {
+        sets: [{
+            class: 'Artist',
+            ids: ['1', '3'],
+            fetch: [{
+                rel: 'cds',
+                quantity: 'all'
+            }]
+        }, {
+            class: 'Producer',
+            ids: ['5'],
+            fetch: [{ 
+                rel: 'artists',
+                quantity: '2',
+                fetch: [{
+                    rel: 'cds',
+                    quantity: 'all'
+                }]
+            }]
+        }]
+    }
+
+rules must be a hash keyed by class name.
+
+=head2 might_have
+
+Specifies whether to automatically dump might_have relationships. Should be a hash with one attribute - fetch. Set fetch to 1 or 0.
+
+    {
+        might_have: [{
+            fetch: 1
+        },
+        sets: [{
+            class: 'Artist',
+            ids: ['1', '3']
+        }, {
+            class: 'Producer',
+            ids: ['5']
+        }]
+    }
+
+Note: belongs_to rels are automatically dumped whether you like it or not, this is to avoid FKs to nowhere when importing. General rules on has_many rels are not accepted at this top level, but you can turn them on for individual sets - see L</SET ATTRIBUTES>.
+
+=head1 SET ATTRIBUTES
+
+=head2 class
+
+Required attribute. Specifies the DBIx::Class object class you wish to dump.
+
+=head2 ids
+
+Array of primary key ids to fetch, basically causing an $rs->find($_) for each. If the id is not in the source db then it just won't get dumped, no warnings or death.
+
+=head2 quantity
+
+Must be either an integer or the string 'all'. Specifying an integer will effectively set the 'rows' attribute on the resultset clause, specifying 'all' will cause the rows attribute to be left off and for all matching rows to be dumped. There's no randomising here, it's just the first x rows.
+
+=head2 cond
+
+A hash specifying the conditions dumped objects must match. Essentially this is a JSON representation of a DBIx::Class search clause. For example:
+
+    {
+        sets: [{
+            class: 'Artist',
+            quantiy: 'all',
+            cond: { name: 'Dave' }
+        }]
+    }
+
+This will dump all artists whose name is 'dave'. Essentially $artist_rs->search({ name => 'Dave' })->all.
+
+Sometimes in a search clause it's useful to use scalar refs to do things like:
+
+$artist_rs->search({ no1_singles => \'> no1_albums' })
+
+This could be specified in the cond hash like so:
+
+    {
+        sets: [{
+            class: 'Artist',
+            quantiy: 'all',
+            cond: { no1_singles: '\> no1_albums' }
+        }]
+    }
+
+So if the value starts with a backslash the value is made a scalar ref before being passed to search.
+
+=head2 join
+
+An array of relationships to be used in the cond clause.
+
+    {
+        sets: [{
+            class: 'Artist',
+            quantiy: 'all',
+            cond: { 'cds.position': { '>': 4 } },
+            join: ['cds']
+        }]
+    }
+
+Fetch all artists who have cds with position greater than 4.
+
+=head2 fetch
+
+Must be an array of hashes. Specifies which rels to also dump. For example:
+
+    {
+        sets: [{
+            class: 'Artist',
+            ids: ['1', '3'],
+            fetch: [{
+                rel: 'cds',
+                quantity: '3',
+                cond: { position: '2' }
+            }]
+        }]
+    }
+
+Will cause the cds of artists 1 and 3 to be dumped where the cd position is 2.
+
+Valid attributes are: 'rel', 'quantity', 'cond', 'has_many', 'might_have' and 'join'. rel is the name of the DBIx::Class rel to follow, the rest are the same as in the set attributes. quantity is necessary for has_many relationships, but not if using for belongs_to or might_have relationships.
+
+=head2 has_many
+
+Specifies whether to fetch has_many rels for this set. Must be a hash containing keys fetch and quantity. 
+
+Set fetch to 1 if you want to fetch them, and quantity to either 'all' or an integer.
+
+=head2 might_have
+
+As with has_many but for might_have relationships. Quantity doesn't do anything in this case.
+
+This value will be inherited by all fetches in this set. This is not true for the has_many attribute.
+
+=head1 RULE ATTRIBUTES
+
+=head2 cond
+
+Same as with L</SET ATTRIBUTES>
+
+=head2 fetch
+
+Same as with L</SET ATTRIBUTES>
+
+=head2 join
+
+Same as with L</SET ATTRIBUTES>
+
+=head2 has_many
+
+Same as with L</SET ATTRIBUTES>
+
+=head2 might_have
+
+Same as with L</SET ATTRIBUTES>
 
 =head1 METHODS
 
 =head2 new
+
+=over 4
+
+=item Arguments: \%$attrs
+
+=item Return Value: $fixture_object
+
+=back
+
+Returns a new DBIx::Class::Fixture object. %attrs has only valid key at the
+moment - 'config_dir' which is required and much contain a valid path to
+the directory in which your .json configs reside.
+
+  my $fixtures = DBIx::Class::Fixtures->new({ config_dir => '/home/me/app/fixture_configs' });
 
 =cut
 
@@ -100,6 +320,28 @@ sub new {
 }
 
 =head2 dump
+
+=over 4
+
+=item Arguments: \%$attrs
+
+=item Return Value: 1
+
+=back
+
+  $fixtures->dump({
+    config => 'set_config.json', # config file to use. must be in the config directory specified in the constructor
+    schema => $source_dbic_schema,
+    directory => '/home/me/app/fixtures' # output directory
+  });
+
+In this case objects will be dumped to subdirectories in the specified directory. For example:
+
+  /home/me/app/fixtures/artist/1.fix
+  /home/me/app/fixtures/artist/3.fix
+  /home/me/app/fixtures/producer/5.fix
+
+config, schema and directory are all required attributes.
 
 =cut
 
@@ -364,6 +606,33 @@ sub _generate_schema {
   return $schema;
 }
 
+
+=head2 populate
+
+=over 4
+
+=item Arguments: \%$attrs
+
+=item Return Value: 1
+
+=back
+
+  $fixtures->populate({
+    directory => '/home/me/app/fixtures', # directory to look for fixtures in, as specified to dump
+    ddl => '/home/me/app/sql/ddl.sql', # DDL to deploy
+    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'] # database to clear, deploy and then populate
+  });
+
+In this case the database app_dev will be cleared entirely of everything, then the DDL deployed to it, 
+then finally all fixtures found in /home/me/app/fixtures will be added to it. populate will generate
+its own DBIx::Class schema from the DDL rather than being passed one to use. This is better as
+custom insert methods etc are avoided which tend to get in the way. In some cases you might not
+have a DDL, and so this method will eventually allow a $schema object to be passed instead.
+
+directory, dll and connection_details are all required attributes.
+
+=cut
+
 sub populate {
   my $self = shift;
   my ($params) = @_;
@@ -467,4 +736,16 @@ sub msg {
 	print $subject . "\n";
   }
 }
+
+=head1 AUTHOR
+
+  Luke Saunders <luke@shadowcatsystems.co.uk>
+
+=head1 CONTRIBUTORS
+
+  Ash Berlin <ash@shadowcatsystems.co.uk>
+  Matt S. Trout <mst@shadowcatsystems.co.uk>
+
+=cut
+
 1;
