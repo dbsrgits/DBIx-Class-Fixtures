@@ -18,6 +18,11 @@ use Data::Dumper;
 
 use base qw(Class::Accessor);
 
+our %db_to_parser = (
+  'mysql'	=> 'DateTime::Format::MySQL',
+  'pg'		=> 'DateTime::Format::Pg',
+);
+
 __PACKAGE__->mk_accessors(qw(config_dir _inherited_attributes debug schema_class ));
 
 =head1 VERSION
@@ -221,24 +226,31 @@ sub dump_object {
     $self->msg('-- dumping ' . $file->stringify, 2);
     my %ds = $object->get_columns;
 
+    my $driver = $object->result_source->schema->storage->dbh->{Driver}->{Name};
+    my $formatter= $db_to_parser{$driver};
+    eval "require $formatter" if ($formatter);
+
     # mess with dates if specified
-    if ($set->{datetime_relative}) {     
-      my $dt;
-      if ($set->{datetime_relative} eq 'today') {
-        $dt = DateTime->today;
+    if ($set->{datetime_relative}) {
+      unless ($@ || !$formatter) {
+        my $dt;
+        if ($set->{datetime_relative} eq 'today') {
+          $dt = DateTime->today;
+        } else {
+          $dt = $formatter->parse_datetime($set->{datetime_relative}) unless ($@);
+        }
+
+        while (my ($col, $value) = each %ds) {
+          my $col_info = $object->result_source->column_info($col);
+
+          next unless $value
+            && $col_info->{_inflate_info}
+              && uc($col_info->{data_type}) eq 'DATETIME';
+
+          $ds{$col} = $object->get_inflated_column($col)->subtract_datetime($dt);
+        }
       } else {
-        require DateTime::Format::MySQL;
-        $dt = DateTime::Format::MySQL->parse_datetime($set->{datetime_relative});
-      }
-
-      while (my ($col, $value) = each %ds) {
-        my $col_info = $object->result_source->column_info($col);
-
-        next unless $value
-          && $col_info->{_inflate_info}
-            && uc($col_info->{data_type}) eq 'DATETIME';
-
-        $ds{$col} = $object->get_inflated_column($col)->subtract_datetime($dt);
+        warn "datetime_relative not supported for $driver at the moment";
       }
     }
 
@@ -402,20 +414,25 @@ sub populate {
   dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for $schema->sources;
 
   eval { $schema->storage->dbh->do('SET foreign_key_checks=0') };
-  my $fixup_visitor;
-  my %callbacks;
-  if ($params->{datetime_relative_to}) {
-    $callbacks{'DateTime::Duration'} = sub {
-      $params->{datetime_relative_to}->clone->add_duration($_);
-    };
-  } else {
-    $callbacks{'DateTime::Duration'} = sub {
-      DateTime->today->add_duration($_)
-    };
-  }
-  $callbacks{object} ||= "visit_ref";	
-  $fixup_visitor = new Data::Visitor::Callback(%callbacks);
 
+  my $fixup_visitor;
+  my $driver = $schema->storage->dbh->{Driver}->{Name};
+  my $formatter= $db_to_parser{$driver};  
+  eval "require $formatter" if ($formatter);
+  unless ($@ || !$formatter) {
+    my %callbacks;
+    if ($params->{datetime_relative_to}) {
+      $callbacks{'DateTime::Duration'} = sub {
+        $params->{datetime_relative_to}->clone->add_duration($_);
+      };
+    } else {
+      $callbacks{'DateTime::Duration'} = sub {
+        $formatter->format_datetime(DateTime->today->add_duration($_))
+      };
+    }
+    $callbacks{object} ||= "visit_ref";	
+    $fixup_visitor = new Data::Visitor::Callback(%callbacks);
+  }
   foreach my $source (sort $schema->sources) {
     $self->msg("- adding " . $source);
     my $rs = $schema->resultset($source);
@@ -428,7 +445,7 @@ sub populate {
       my $HASH1;
       eval($contents);
       $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
-      $rs->find_or_create($HASH1);
+      $rs->create($HASH1);
     }
   }
 

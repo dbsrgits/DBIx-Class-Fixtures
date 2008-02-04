@@ -45,15 +45,16 @@ default, unless the no_deploy or no_populate flags are set.
 sub init_schema {
     my $self = shift;
     my %args = @_;
+
     my $db_file = "t/var/DBIxClass.db";
 
     unlink($db_file) if -e $db_file;
     unlink($db_file . "-journal") if -e $db_file . "-journal";
     mkdir("t/var") unless -d "t/var";
 
-    my $dsn = $ENV{"FIXTURETEST_DSN"} || "dbi:SQLite:${db_file}";
-    my $dbuser = $ENV{"FIXTURETEST_DBUSER"} || '';
-    my $dbpass = $ENV{"FIXTURETEST_DBPASS"} || '';
+    my $dsn = $args{"dsn"} || "dbi:SQLite:${db_file}";
+    my $dbuser = $args{"user"} || '';
+    my $dbpass = $args{"pass"} || '';
 
     my $schema;
 
@@ -67,12 +68,20 @@ sub init_schema {
       $schema = DBICTest::Schema->compose_namespace('DBICTest')
                                 ->connect(@connect_info);
     }
-    $schema->storage->on_connect_do(['PRAGMA synchronous = OFF']);
+
     if ( !$args{no_deploy} ) {
         __PACKAGE__->deploy_schema( $schema );
         __PACKAGE__->populate_schema( $schema ) if( !$args{no_populate} );
     }
     return $schema;
+}
+
+
+sub get_ddl_file {
+  my $self = shift;
+  my $schema = shift;
+
+  return 't/lib/' . lc($schema->storage->dbh->{Driver}->{Name}) . '.sql';
 }
 
 =head2 deploy_schema
@@ -85,7 +94,9 @@ sub deploy_schema {
     my $self = shift;
     my $schema = shift;
 
-    open IN, "t/lib/sqlite.sql";
+
+    my $file = $self->get_ddl_file($schema);
+    open IN, $file;
     my $sql;
     { local $/ = undef; $sql = <IN>; }
     close IN;
@@ -167,13 +178,13 @@ sub populate_schema {
     ]);
 
     $schema->populate('Track', [
-        [ qw/trackid cd  position title/ ],
+        [ qw/trackid cd  position title last_updated_on/ ],
         [ 4, 2, 1, "Stung with Success"],
         [ 5, 2, 2, "Stripy"],
         [ 6, 2, 3, "Sticky Honey"],
         [ 7, 3, 1, "Yowlin"],
         [ 8, 3, 2, "Howlin"],
-        [ 9, 3, 3, "Fowlin"],
+        [ 9, 3, 3, "Fowlin", '2007-10-20 00:00:00'],
         [ 10, 4, 1, "Boring Name"],
         [ 11, 4, 2, "Boring Song"],
         [ 12, 4, 3, "No More Ideas"],
