@@ -83,6 +83,8 @@ For example:
 
 This will fetch artists with primary keys 1 and 3, the producer with primary key 5 and two of producer 5's artists where 'artists' is a has_many DBIx::Class rel from Producer to Artist.
 
+The top level attributes are as follows:
+
 =head2 sets
 
 Sets must be an array of hashes, as in the example given above. Each set defines a set of objects to be included in the fixtures. For details on valid set attributes see L</SET ATTRIBUTES> below.
@@ -138,6 +140,22 @@ In this case all the cds of artists 1, 3 and all producer 5's artists will be du
     }
 
 rules must be a hash keyed by class name.
+
+L</RULE ATTRIBUTES>
+
+=head2 datetime_relative
+
+Only available for MySQL and PostgreSQL at the moment, must be a value that DateTime::Format::* can parse. For example:
+
+    {
+        sets: [{
+            class: 'RecentItems',
+            ids: ['9']
+        }],
+        datetime_relative : "2007-10-30 00:00:00"
+    }
+
+This will work when dumping from a MySQL database and will cause any datetime fields (where datatype => 'datetime' in the column def of the schema class) to be dumped as a DateTime::Duration object relative to the date specified in the datetime_relative value. For example if the RecentItem object had a date field set to 2007-10-25, then when the fixture is imported the field will be set to 5 days in the past relative to the current time.
 
 =head2 might_have
 
@@ -243,6 +261,8 @@ Specifies whether to fetch has_many rels for this set. Must be a hash containing
 
 Set fetch to 1 if you want to fetch them, and quantity to either 'all' or an integer.
 
+Be careful here, dumping has_many rels can lead to a lot of data being dumped.
+
 =head2 might_have
 
 As with has_many but for might_have relationships. Quantity doesn't do anything in this case.
@@ -283,8 +303,8 @@ Same as with L</SET ATTRIBUTES>
 
 =back
 
-Returns a new DBIx::Class::Fixture object. %attrs has only valid key at the
-moment - 'config_dir' which is required and much contain a valid path to
+Returns a new DBIx::Class::Fixture object. %attrs has only two valid keys at the
+moment - 'debug' which determines whether to be verbose and 'config_dir' which is required and much contain a valid path to
 the directory in which your .json configs reside.
 
   my $fixtures = DBIx::Class::Fixtures->new({ config_dir => '/home/me/app/fixture_configs' });
@@ -623,10 +643,10 @@ sub _generate_schema {
     connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'] # database to clear, deploy and then populate
   });
 
-In this case the database app_dev will be cleared entirely of everything, then the DDL deployed to it, 
+In this case the database app_dev will be cleared of all tables, then the specified DDL deployed to it,
 then finally all fixtures found in /home/me/app/fixtures will be added to it. populate will generate
 its own DBIx::Class schema from the DDL rather than being passed one to use. This is better as
-custom insert methods etc are avoided which tend to get in the way. In some cases you might not
+custom insert methods are avoided which can to get in the way. In some cases you might not
 have a DDL, and so this method will eventually allow a $schema object to be passed instead.
 
 directory, dll and connection_details are all required attributes.
