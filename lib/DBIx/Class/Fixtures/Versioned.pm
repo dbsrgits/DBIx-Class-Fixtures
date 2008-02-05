@@ -33,7 +33,6 @@ sub populate {
   unless ($params->{version}) {
     return DBIx::Class::Exception->throw('You must pass a version to populate');
   }
-
   return $self->next::method(@_);
 }
 
@@ -45,11 +44,9 @@ sub _generate_schema {
   $DBIx::Class::Fixtures::SchemaVersioned::VERSION = $params->{version};
 
   my $schema = $self->next::method(@_);
-  $schema->schema_version($params->{version});
 
   # set the db version to the schema version
   $schema->upgrade(); # set version number
-
   return $schema;
 }
 

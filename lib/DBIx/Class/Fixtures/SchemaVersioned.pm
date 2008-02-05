@@ -12,4 +12,7 @@ __PACKAGE__->loader_options(
                             # debug                 => 1,
                            );
 
+sub schema_version {
+	return $DBIx::Class::Fixtures::SchemaVersioned::VERSION;
+}
 1;
