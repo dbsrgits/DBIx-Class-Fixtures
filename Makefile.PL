@@ -10,7 +10,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0.7,
         'DBIx::Class' => 0.08,
-        'Class::Accessor::Grouped' => 0.08001,
+        'Class::Accessor::Grouped' => 0.06,
         'Path::Class' => 0.16,
         'Config::Any' => 0.08,
         'JSON::Syck' => 0.26,
