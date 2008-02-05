@@ -15,13 +15,11 @@ use File::Copy::Recursive qw/dircopy/;
 use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
+use Class::C3::Componentised;
 
 use base qw(Class::Accessor::Grouped);
 
-our %db_to_parser = (
-  'mysql'	=> 'DateTime::Format::MySQL',
-  'pg'		=> 'DateTime::Format::Pg',
-);
+our $namespace_counter = 0;
 
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir _inherited_attributes debug schema_class/);
 
@@ -610,10 +608,14 @@ sub _generate_schema {
 
   my $pre_schema;
   my $connection_details = $params->{connection_details};
-  unless( $pre_schema = $schema_class->connect(@{$connection_details}) ) {
+  $namespace_counter++;
+  my $namespace = "DBIx::Class::Fixtures::GeneratedSchema_" . $namespace_counter;
+  Class::C3::Componentised->inject_base( $namespace => $schema_class );
+  $pre_schema = $namespace->connect(@{$connection_details});
+  unless( $pre_schema ) {
     return DBIx::Class::Exception->throw('connection details not valid');
   }
-  my @tables = map { $pre_schema->source($_)->from }$pre_schema->sources;
+  my @tables = map { $pre_schema->source($_)->from } $pre_schema->sources;
   my $dbh = $pre_schema->storage->dbh;
 
   # clear existing db
@@ -639,7 +641,7 @@ sub _generate_schema {
 
   # load schema object from our new DB
   $self->msg("- loading fresh DBIC object from DB");
-  my $schema = $schema_class->connect(@{$connection_details});
+  my $schema = $namespace->connect(@{$connection_details});
   return $schema;
 }
 
