@@ -94,8 +94,7 @@ sub deploy_schema {
     my $self = shift;
     my $schema = shift;
 
-
-    my $file = $self->get_ddl_file($schema);
+    my $file = shift || $self->get_ddl_file($schema);
     open IN, $file;
     my $sql;
     { local $/ = undef; $sql = <IN>; }

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use DBIx::Class::Exception;
-use Class::Accessor;
+use Class::Accessor::Grouped;
 use Path::Class qw(dir file);
 use File::Slurp;
 use Config::Any::JSON;
@@ -16,14 +16,14 @@ use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 
-use base qw(Class::Accessor);
+use base qw(Class::Accessor::Grouped);
 
 our %db_to_parser = (
   'mysql'	=> 'DateTime::Format::MySQL',
   'pg'		=> 'DateTime::Format::Pg',
 );
 
-__PACKAGE__->mk_accessors(qw(config_dir _inherited_attributes debug schema_class ));
+__PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir _inherited_attributes debug schema_class/);
 
 =head1 VERSION
 
@@ -59,11 +59,16 @@ DBIx::Class::Fixtures
 
 =head1 DESCRIPTION
 
-Dump fixtures from source database to filesystem then import to another database (with same schema) at any time. Use as a constant dataset for running tests against or for populating development databases when impractical to use production clones. Describe fixture set using relations and conditions based on your DBIx::Class schema.
+Dump fixtures from source database to filesystem then import to another database (with same schema)
+at any time. Use as a constant dataset for running tests against or for populating development databases
+when impractical to use production clones. Describe fixture set using relations and conditions based 
+on your DBIx::Class schema.
 
 =head1 DEFINE YOUR FIXTURE SET
 
-Fixture sets are currently defined in .json files which must reside in your config_dir (e.g. /home/me/app/fixture_configs/a_fixture_set.json). They describe which data to pull and dump from the source database.
+Fixture sets are currently defined in .json files which must reside in your config_dir 
+(e.g. /home/me/app/fixture_configs/a_fixture_set.json). They describe which data to pull and dump 
+from the source database.
 
 For example:
 
@@ -81,17 +86,20 @@ For example:
         }] 
     }
 
-This will fetch artists with primary keys 1 and 3, the producer with primary key 5 and two of producer 5's artists where 'artists' is a has_many DBIx::Class rel from Producer to Artist.
+This will fetch artists with primary keys 1 and 3, the producer with primary key 5 and two of producer 5's 
+artists where 'artists' is a has_many DBIx::Class rel from Producer to Artist.
 
 The top level attributes are as follows:
 
 =head2 sets
 
-Sets must be an array of hashes, as in the example given above. Each set defines a set of objects to be included in the fixtures. For details on valid set attributes see L</SET ATTRIBUTES> below.
+Sets must be an array of hashes, as in the example given above. Each set defines a set of objects to be
+included in the fixtures. For details on valid set attributes see L</SET ATTRIBUTES> below.
 
 =head2 rules
 
-Rules place general conditions on classes. For example if whenever an artist was dumped you also wanted all of their cds dumped too, then you could use a rule to specify this. For example:
+Rules place general conditions on classes. For example if whenever an artist was dumped you also wanted all
+of their cds dumped too, then you could use a rule to specify this. For example:
 
     {
         sets: [{
@@ -115,7 +123,8 @@ Rules place general conditions on classes. For example if whenever an artist was
         }
     }
 
-In this case all the cds of artists 1, 3 and all producer 5's artists will be dumped as well. Note that 'cds' is a has_many DBIx::Class relation from Artist to CD. This is eqivalent to:
+In this case all the cds of artists 1, 3 and all producer 5's artists will be dumped as well. Note that 'cds' is a
+has_many DBIx::Class relation from Artist to CD. This is eqivalent to:
 
     {
         sets: [{
@@ -145,7 +154,8 @@ L</RULE ATTRIBUTES>
 
 =head2 datetime_relative
 
-Only available for MySQL and PostgreSQL at the moment, must be a value that DateTime::Format::* can parse. For example:
+Only available for MySQL and PostgreSQL at the moment, must be a value that DateTime::Format::*
+can parse. For example:
 
     {
         sets: [{
@@ -155,7 +165,10 @@ Only available for MySQL and PostgreSQL at the moment, must be a value that Date
         datetime_relative : "2007-10-30 00:00:00"
     }
 
-This will work when dumping from a MySQL database and will cause any datetime fields (where datatype => 'datetime' in the column def of the schema class) to be dumped as a DateTime::Duration object relative to the date specified in the datetime_relative value. For example if the RecentItem object had a date field set to 2007-10-25, then when the fixture is imported the field will be set to 5 days in the past relative to the current time.
+This will work when dumping from a MySQL database and will cause any datetime fields (where datatype => 'datetime' 
+in the column def of the schema class) to be dumped as a DateTime::Duration object relative to the date specified in
+the datetime_relative value. For example if the RecentItem object had a date field set to 2007-10-25, then when the
+fixture is imported the field will be set to 5 days in the past relative to the current time.
 
 =head2 might_have
 
@@ -174,7 +187,9 @@ Specifies whether to automatically dump might_have relationships. Should be a ha
         }]
     }
 
-Note: belongs_to rels are automatically dumped whether you like it or not, this is to avoid FKs to nowhere when importing. General rules on has_many rels are not accepted at this top level, but you can turn them on for individual sets - see L</SET ATTRIBUTES>.
+Note: belongs_to rels are automatically dumped whether you like it or not, this is to avoid FKs to nowhere when importing.
+General rules on has_many rels are not accepted at this top level, but you can turn them on for individual
+sets - see L</SET ATTRIBUTES>.
 
 =head1 SET ATTRIBUTES
 
@@ -184,11 +199,14 @@ Required attribute. Specifies the DBIx::Class object class you wish to dump.
 
 =head2 ids
 
-Array of primary key ids to fetch, basically causing an $rs->find($_) for each. If the id is not in the source db then it just won't get dumped, no warnings or death.
+Array of primary key ids to fetch, basically causing an $rs->find($_) for each. If the id is not in the source db then it
+just won't get dumped, no warnings or death.
 
 =head2 quantity
 
-Must be either an integer or the string 'all'. Specifying an integer will effectively set the 'rows' attribute on the resultset clause, specifying 'all' will cause the rows attribute to be left off and for all matching rows to be dumped. There's no randomising here, it's just the first x rows.
+Must be either an integer or the string 'all'. Specifying an integer will effectively set the 'rows' attribute on the resultset clause,
+specifying 'all' will cause the rows attribute to be left off and for all matching rows to be dumped. There's no randomising
+here, it's just the first x rows.
 
 =head2 cond
 
@@ -253,7 +271,9 @@ Must be an array of hashes. Specifies which rels to also dump. For example:
 
 Will cause the cds of artists 1 and 3 to be dumped where the cd position is 2.
 
-Valid attributes are: 'rel', 'quantity', 'cond', 'has_many', 'might_have' and 'join'. rel is the name of the DBIx::Class rel to follow, the rest are the same as in the set attributes. quantity is necessary for has_many relationships, but not if using for belongs_to or might_have relationships.
+Valid attributes are: 'rel', 'quantity', 'cond', 'has_many', 'might_have' and 'join'. rel is the name of the DBIx::Class
+rel to follow, the rest are the same as in the set attributes. quantity is necessary for has_many relationships,
+but not if using for belongs_to or might_have relationships.
 
 =head2 has_many
 
@@ -488,10 +508,7 @@ sub dump_object {
     $self->msg('-- dumping ' . $file->stringify, 2);
     my %ds = $object->get_columns;
 
-    my $driver = $object->result_source->schema->storage->dbh->{Driver}->{Name};
-    my $formatter= $db_to_parser{$driver};
-    eval "require $formatter" if ($formatter);
-
+    my $formatter= $object->result_source->schema->storage->datetime_parser;
     # mess with dates if specified
     if ($set->{datetime_relative}) {
       unless ($@ || !$formatter) {
@@ -512,7 +529,7 @@ sub dump_object {
           $ds{$col} = $object->get_inflated_column($col)->subtract_datetime($dt);
         }
       } else {
-        warn "datetime_relative not supported for $driver at the moment";
+        warn "datetime_relative not supported for this db driver at the moment";
       }
     }
 
@@ -705,9 +722,7 @@ sub populate {
   eval { $schema->storage->dbh->do('SET foreign_key_checks=0') };
 
   my $fixup_visitor;
-  my $driver = $schema->storage->dbh->{Driver}->{Name};
-  my $formatter= $db_to_parser{$driver};  
-  eval "require $formatter" if ($formatter);
+  my $formatter= $schema->storage->datetime_parser;
   unless ($@ || !$formatter) {
     my %callbacks;
     if ($params->{datetime_relative_to}) {
@@ -742,6 +757,8 @@ sub populate {
   $self->msg("- cleaning up");
   $tmp_fixture_dir->rmtree;
   eval { $schema->storage->dbh->do('SET foreign_key_checks=1') };
+
+  return 1;
 }
 
 sub msg {
