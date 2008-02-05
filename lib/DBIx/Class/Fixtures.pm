@@ -781,10 +781,16 @@ sub msg {
 
   Luke Saunders <luke@shadowcatsystems.co.uk>
 
+  Initial development sponsored by and (c) Takkle, Inc. 2007
+
 =head1 CONTRIBUTORS
 
   Ash Berlin <ash@shadowcatsystems.co.uk>
   Matt S. Trout <mst@shadowcatsystems.co.uk>
+
+=head1 LICENSE
+
+  This library is free software under the same license as perl itself
 
 =cut
 
