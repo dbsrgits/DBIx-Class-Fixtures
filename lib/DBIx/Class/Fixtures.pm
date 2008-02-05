@@ -25,11 +25,11 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir _inherited_attributes
 
 =head1 VERSION
 
-Version 1.000
+Version 0.999_01
 
 =cut
 
-our $VERSION = '1.000';
+our $VERSION = '0.999_01';
 
 =head1 NAME
 
@@ -409,6 +409,7 @@ sub dump {
 
   my $output_dir = dir($params->{directory});
   unless (-e $output_dir) {
+    $output_dir->mkpath ||
     return DBIx::Class::Exception->throw('output directory does not exist at ' . $output_dir);
   }
 

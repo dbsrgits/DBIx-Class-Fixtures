@@ -8,7 +8,7 @@ use Path::Class;
 use Data::Dumper; 
 use DateTime;
 
-plan skip_all => 'Set $ENV{FIXTURETEST_DSN}, _USER and _PASS to mysql db run this test'
+plan skip_all => 'Set $ENV{FIXTURETEST_DSN}, _USER and _PASS to point at MySQL DB to run this test'
   unless ($ENV{FIXTURETEST_DSN});
 
 plan tests => 5;
