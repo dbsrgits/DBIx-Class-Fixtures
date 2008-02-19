@@ -416,7 +416,7 @@ sub dump {
   my $schema = $params->{schema};
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = dir($output_dir, '-~dump~-');
+  my $tmp_output_dir = dir($output_dir, '-~dump~-' . $<);
 
   if (-e $tmp_output_dir) {
     $self->msg("- clearing existing $tmp_output_dir");
