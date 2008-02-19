@@ -720,7 +720,7 @@ sub populate {
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
-  dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for $schema->sources;
+  dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for grep { -e dir($fixture_dir, $schema->source($_)->from) } $schema->sources;
 
   eval { $schema->storage->dbh->do('SET foreign_key_checks=0') };
 

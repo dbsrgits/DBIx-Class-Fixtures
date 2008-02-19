@@ -16,6 +16,7 @@ WriteMakefile(
         'JSON::Syck' => 0.26,
         'Data::Dump::Streamer' => 2.05,
         'Hash::Merge' => 0.10,
+        'DBD::SQLite' => 1.14,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'DBIx-Class-Fixtures-*' },
