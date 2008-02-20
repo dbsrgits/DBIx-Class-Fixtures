@@ -373,13 +373,21 @@ sub new {
     directory => '/home/me/app/fixtures' # output directory
   });
 
+  or
+
+  $fixtures->dump({
+    all => 1, # just dump everything that's in the schema
+    schema => $source_dbic_schema,
+    directory => '/home/me/app/fixtures' # output directory
+  });
+
 In this case objects will be dumped to subdirectories in the specified directory. For example:
 
   /home/me/app/fixtures/artist/1.fix
   /home/me/app/fixtures/artist/3.fix
   /home/me/app/fixtures/producer/5.fix
 
-config, schema and directory are all required attributes.
+schema and directory are required attributes. also, one of config or all must be specified.
 
 =cut
 
@@ -391,29 +399,41 @@ sub dump {
     return DBIx::Class::Exception->throw('first arg to dump must be hash ref');
   }
 
-  foreach my $param (qw/config schema directory/) {
+  foreach my $param (qw/schema directory/) {
     unless ($params->{$param}) {
       return DBIx::Class::Exception->throw($param . ' param not specified');
     }
   }
 
-  my $config_file = file($self->config_dir, $params->{config});
-  unless (-e $config_file) {
-    return DBIx::Class::Exception->throw('config does not exist at ' . $config_file);
-  }
+  my $schema = $params->{schema};
+  my $config_file;
+  my $config;
+  if ($params->{config}) {
+    $config_file = file($self->config_dir, $params->{config});
+    unless (-e $config_file) {
+      return DBIx::Class::Exception->throw('config does not exist at ' . $config_file);
+    }
 
-  my $config = Config::Any::JSON->load($config_file);
-  unless ($config && $config->{sets} && ref $config->{sets} eq 'ARRAY' && scalar(@{$config->{sets}})) {
-    return DBIx::Class::Exception->throw('config has no sets');
+    $config = Config::Any::JSON->load($config_file);
+    unless ($config && $config->{sets} && ref $config->{sets} eq 'ARRAY' && scalar(@{$config->{sets}})) {
+      return DBIx::Class::Exception->throw('config has no sets');
+    }
+
+    $config->{might_have} = { fetch => 0 } unless (exists $config->{might_have});
+    $config->{has_many} = { fetch => 0 } unless (exists $config->{has_many});
+    $config->{belongs_to} = { fetch => 1 } unless (exists $config->{belongs_to});
+  } elsif ($params->{all}) {
+    $config = { might_have => { fetch => 0 }, has_many => { fetch => 0 }, belongs_to => { fetch => 0 }, sets => [map {{ class => $_, quantity => 'all' }} $schema->sources] };
+    print Dumper($config);
+  } else {
+    return DBIx::Class::Exception->throw('must pass config or set all');
   }
 
   my $output_dir = dir($params->{directory});
   unless (-e $output_dir) {
     $output_dir->mkpath ||
-    return DBIx::Class::Exception->throw('output directory does not exist at ' . $output_dir);
+      return DBIx::Class::Exception->throw('output directory does not exist at ' . $output_dir);
   }
-
-  my $schema = $params->{schema};
 
   $self->msg("generating  fixtures");
   my $tmp_output_dir = dir($output_dir, '-~dump~-' . $<);
@@ -438,8 +458,8 @@ sub dump {
     $source = merge( $source, $rule ) if ($rule);
 
     # fetch objects
-    my $rs = $schema->resultset($source->{class});	
-	$rs = $rs->search($source->{cond}, { join => $source->{join} }) if ($source->{cond});
+    my $rs = $schema->resultset($source->{class});
+    $rs = $rs->search($source->{cond}, { join => $source->{join} }) if ($source->{cond});
     $self->msg("- dumping $source->{class}");
     my @objects;
     my %source_options = ( set => { %{$config}, %{$source} } );
@@ -537,6 +557,9 @@ sub dump_object {
     write_file($file->stringify, $serialized);
     my $mode = 0777; chmod $mode, $file->stringify;  
   }
+
+  # don't bother looking at rels unless we are actually planning to dump at least one type
+  return unless ($set->{might_have}->{fetch} || $set->{belongs_to}->{fetch} || $set->{has_many}->{fetch} || $set->{fetch});
 
   # dump rels of object
   my $s = $object->result_source;
