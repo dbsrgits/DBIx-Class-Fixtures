@@ -664,8 +664,10 @@ sub _generate_schema {
   $self->msg("- finished importing DDL into DB");
 
   # load schema object from our new DB
-  $self->msg("- loading fresh DBIC object from DB");
-  my $schema = $namespace->connect(@{$connection_details});
+  $namespace_counter++;
+  my $namespace2 = "DBIx::Class::Fixtures::GeneratedSchema_" . $namespace_counter;
+  Class::C3::Componentised->inject_base( $namespace2 => $schema_class );
+  my $schema = $namespace2->connect(@{$connection_details});
   return $schema;
 }
 
