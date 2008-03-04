@@ -1,10 +1,22 @@
 Changes
+inc/Module/AutoInstall.pm
+inc/Module/Install.pm
+inc/Module/Install/AutoInstall.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Include.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
+lib/DBIx/Class/Fixtures.pm
 lib/DBIx/Class/Fixtures/Schema.pm
 lib/DBIx/Class/Fixtures/SchemaVersioned.pm
 lib/DBIx/Class/Fixtures/Versioned.pm
-lib/DBIx/Class/Fixtures.pm
 Makefile.PL
 MANIFEST
+META.yml			Module meta-data (added by MakeMaker)
 README
 t/00-load.t
 t/01-new.t
@@ -13,20 +25,21 @@ t/03-dump-quantity.t
 t/04-dump-fetch.t
 t/05-dump-rules.t
 t/06-dump-date.t
+t/07-dump-all.t
 t/12-populate-basic.t
 t/13populate-two-dbs.t
+t/lib/DBICTest.pm
+t/lib/DBICTest/Schema.pm
 t/lib/DBICTest/Schema/Artist.pm
 t/lib/DBICTest/Schema/CD.pm
 t/lib/DBICTest/Schema/CD_to_Producer.pm
 t/lib/DBICTest/Schema/Producer.pm
 t/lib/DBICTest/Schema/Tag.pm
 t/lib/DBICTest/Schema/Track.pm
-t/lib/DBICTest/Schema.pm
+t/lib/DBICTest/Schema2.pm
 t/lib/DBICTest/Schema2/Artist.pm
 t/lib/DBICTest/Schema2/CD.pm
 t/lib/DBICTest/Schema2/Friend.pm
-t/lib/DBICTest/Schema2.pm
-t/lib/DBICTest.pm
 t/lib/mysql.sql
 t/lib/sqlite.sql
 t/lib/sqlite_different.sql
@@ -36,4 +49,3 @@ t/var/configs/quantity.json
 t/var/configs/rules.json
 t/var/configs/sample.json
 t/var/configs/simple.json
-META.yml                                 Module meta-data (added by MakeMaker)
