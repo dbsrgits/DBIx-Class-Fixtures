@@ -7,14 +7,6 @@ use base qw/DBIx::Class::Fixtures/;
 use DBIx::Class::Fixtures::SchemaVersioned;
 use Class::C3;
 
-=head1 VERSION
-
-Version 1.000
-
-=cut
-
-our $VERSION = '1.000';
-
 =head1 NAME
 
 DBIx::Class::Fixtures::Versioned
