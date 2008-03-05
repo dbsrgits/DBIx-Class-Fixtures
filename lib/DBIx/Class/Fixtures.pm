@@ -25,11 +25,11 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir _inherited_attributes
 
 =head1 VERSION
 
-Version 1.000001
+Version 1.000002
 
 =cut
 
-our $VERSION = '1.000001';
+our $VERSION = '1.000002';
 
 =head1 NAME
 
