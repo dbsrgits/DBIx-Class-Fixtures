@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001000
+- Added includes functionality
+
 1.000001
 - Added missing deps
 

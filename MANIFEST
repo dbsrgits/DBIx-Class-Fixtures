@@ -26,6 +26,7 @@ t/04-dump-fetch.t
 t/05-dump-rules.t
 t/06-dump-date.t
 t/07-dump-all.t
+t/07-dump-includes.t
 t/12-populate-basic.t
 t/13populate-two-dbs.t
 t/lib/DBICTest.pm
@@ -49,3 +50,4 @@ t/var/configs/quantity.json
 t/var/configs/rules.json
 t/var/configs/sample.json
 t/var/configs/simple.json
+t/var/configs/includes.json
