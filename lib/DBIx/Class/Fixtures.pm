@@ -52,7 +52,8 @@ DBIx::Class::Fixtures
   $fixtures->populate({
     directory => '/home/me/app/fixtures',
     ddl => '/home/me/app/sql/ddl.sql',
-    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password']
+    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'],
+    post_ddl => '/home/me/app/sql/post_ddl.sql',
   });
 
 =head1 DESCRIPTION
@@ -681,25 +682,22 @@ sub _generate_schema {
     return DBIx::Class::Exception->throw('connection details not valid');
   }
   my @tables = map { $pre_schema->source($_)->from } $pre_schema->sources;
+  $self->msg("Tables to drop: [". join(', ', sort @tables) . "]");
   my $dbh = $pre_schema->storage->dbh;
 
   # clear existing db
   $self->msg("- clearing DB of existing tables");
   eval { $dbh->do('SET foreign_key_checks=0') };
-  $dbh->do('drop table ' . $_) for (@tables);
+  foreach my $table (@tables) {
+    eval { $dbh->do('drop table ' . $table . ($params->{cascade} ? ' cascade' : '') ) };
+  }
 
   # import new ddl file to db
   my $ddl_file = $params->{ddl};
   $self->msg("- deploying schema using $ddl_file");
-  my $fh;
-  open $fh, "<$ddl_file" or die ("Can't open DDL file, $ddl_file ($!)");
-  my @data = split(/\n/, join('', <$fh>));
-  @data = grep(!/^--/, @data);
-  @data = split(/;/, join('', @data));
-  close($fh);
-  @data = grep { $_ && $_ !~ /^-- / } @data;
-  for (@data) {
-      eval { $dbh->do($_) or warn "SQL was:\n $_"};
+  my $data = _read_sql($ddl_file);
+  foreach (@$data) {
+    eval { $dbh->do($_) or warn "SQL was:\n $_"};
 	  if ($@) { die "SQL was:\n $_\n$@"; }
   }
   $self->msg("- finished importing DDL into DB");
@@ -712,6 +710,17 @@ sub _generate_schema {
   return $schema;
 }
 
+sub _read_sql {
+  my $ddl_file = shift;
+  my $fh;
+  open $fh, "<$ddl_file" or die ("Can't open DDL file, $ddl_file ($!)");
+  my @data = split(/\n/, join('', <$fh>));
+  @data = grep(!/^--/, @data);
+  @data = split(/;/, join('', @data));
+  close($fh);
+  @data = grep { $_ && $_ !~ /^-- / } @data;
+  return \@data;
+}
 
 =head2 populate
 
@@ -726,7 +735,9 @@ sub _generate_schema {
   $fixtures->populate({
     directory => '/home/me/app/fixtures', # directory to look for fixtures in, as specified to dump
     ddl => '/home/me/app/sql/ddl.sql', # DDL to deploy
-    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'] # database to clear, deploy and then populate
+    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'], # database to clear, deploy and then populate
+    post_ddl => '/home/me/app/sql/post_ddl.sql', # DDL to deploy after populating records, ie. FK constraints
+    cascade => 1, # use CASCADE option when dropping tables
   });
 
 In this case the database app_dev will be cleared of all tables, then the specified DDL deployed to it,
@@ -734,6 +745,13 @@ then finally all fixtures found in /home/me/app/fixtures will be added to it. po
 its own DBIx::Class schema from the DDL rather than being passed one to use. This is better as
 custom insert methods are avoided which can to get in the way. In some cases you might not
 have a DDL, and so this method will eventually allow a $schema object to be passed instead.
+
+If needed, you can specify a post_ddl attribute which is a DDL to be applied after all the fixtures
+have been added to the database. A good use of this option would be to add foreign key constraints
+since databases like Postgresql cannot disable foreign key checks.
+
+If your tables have foreign key constraints you may want to use the cascade attribute which will
+make the drop table functionality cascade, ie 'DROP TABLE $table CASCADE'.
 
 directory, dll and connection_details are all required attributes.
 
@@ -820,6 +838,15 @@ sub populate {
       $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
       $rs->create($HASH1);
     }
+  }
+
+  if ($params->{post_ddl}) {
+    my $data = _read_sql($params->{post_ddl});
+    foreach (@$data) {
+      eval { $schema->storage->dbh->do($_) or warn "SQL was:\n $_"};
+  	  if ($@) { die "SQL was:\n $_\n$@"; }
+    }
+    $self->msg("- finished importing post-populate DDL into DB");
   }
 
   $self->msg("- fixtures imported");

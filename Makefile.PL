@@ -22,8 +22,6 @@ build_requires 'Test::More'       => 0.7;
 
 tests_recursive();
 
-auto_provides;
-
 auto_install;
 
 WriteAll;
