@@ -21,7 +21,7 @@ my $config_dir = 't/var/configs';
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
 ok($fixtures->dump({ config => 'date.json', schema => $schema, directory => 't/var/fixtures' }), 'date dump executed okay');
-ok($fixtures->populate({ ddl => DBICTest->get_ddl_file($schema), connection_details => [$ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_DBUSER} || '', $ENV{FIXTURETEST_DBPASS} || ''], directory => 't/var/fixtures' }), 'date populate okay');
+ok($fixtures->populate({ ddl => DBICTest->get_ddl_file($schema), connection_details => [$ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_USER} || '', $ENV{FIXTURETEST_PASS} || ''], directory => 't/var/fixtures' }), 'date populate okay');
 
 my $track = $schema->resultset('Track')->find(9);
 my $now = DateTime->now();
