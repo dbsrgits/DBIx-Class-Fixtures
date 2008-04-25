@@ -5,6 +5,7 @@ Revision history for DBIx-Class-Fixtures
 - Added post_ddl and cascade attributes to populate (Drew Taylor)
 - Scalar refs in cond clauses handled in sets as well as fetches (Sebastian Willert)
 - Directory separators in primary keys do not cause a crash (Sebastian Willert)
+- Optimised populate to take advantage of insert_bulk (Drew Taylor)
 
 1.000001
 - Added missing deps

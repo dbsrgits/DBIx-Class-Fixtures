@@ -840,6 +840,7 @@ sub populate {
     my $rs = $schema->resultset($source);
     my $source_dir = dir($tmp_fixture_dir, lc($rs->result_source->from));
     next unless (-e $source_dir);
+    my @rows;
     while (my $file = $source_dir->next) {
       next unless ($file =~ /\.fix$/);
       next if $file->is_dir;
@@ -847,8 +848,9 @@ sub populate {
       my $HASH1;
       eval($contents);
       $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
-      $rs->create($HASH1);
+      push(@rows, $HASH1);
     }
+    $rs->populate(\@rows);
   }
 
   if ($params->{post_ddl}) {
