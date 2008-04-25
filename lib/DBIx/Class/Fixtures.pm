@@ -568,7 +568,11 @@ sub dump_object {
   # write dir and gen filename
   my $source_dir = dir($params->{set_dir}, lc($object->result_source->from));
   mkdir($source_dir->stringify, 0777);
-  my $file = file($source_dir, join('-', map { $object->get_column($_) } sort $object->primary_columns) . '.fix');
+
+  # strip dir separators from file name
+  my $file = file($source_dir, join('-', map { 
+    ( my $a = $object->get_column($_) ) =~ s|[/\\]|_|g; $a;
+  } sort $object->primary_columns) . '.fix');
 
   # write file
   my $exists = (-e $file->stringify) ? 1 : 0;
