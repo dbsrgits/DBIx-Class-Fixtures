@@ -191,7 +191,7 @@ fixture is imported the field will be set to 5 days in the past relative to the 
 Specifies whether to automatically dump might_have relationships. Should be a hash with one attribute - fetch. Set fetch to 1 or 0.
 
     {
-        might_have: [{
+        might_have: {
             fetch: 1
         },
         sets: [{
@@ -501,6 +501,13 @@ sub dump {
 
     # fetch objects
     my $rs = $schema->resultset($source->{class});
+
+    if ($source->{cond} and ref $source->{cond} eq 'HASH') {
+      # if value starts with / assume it's meant to be passed as a scalar ref to dbic
+      # ideally this would substitute deeply
+      $source->{cond} = { map { $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_} : $source->{cond}->{$_} } keys %{$source->{cond}} };
+    }
+
     $rs = $rs->search($source->{cond}, { join => $source->{join} }) if ($source->{cond});
     $self->msg("- dumping $source->{class}");
     my @objects;
