@@ -890,6 +890,7 @@ sub msg {
 
   Ash Berlin <ash@shadowcatsystems.co.uk>
   Matt S. Trout <mst@shadowcatsystems.co.uk>
+  Drew Taylor <taylor.andrew.j@gmail.com>
 
 =head1 LICENSE
 
