@@ -853,14 +853,7 @@ sub populate {
     $rs->populate(\@rows);
   }
 
-  if ($params->{post_ddl}) {
-    my $data = _read_sql($params->{post_ddl});
-    foreach (@$data) {
-      eval { $schema->storage->dbh->do($_) or warn "SQL was:\n $_"};
-  	  if ($@) { die "SQL was:\n $_\n$@"; }
-    }
-    $self->msg("- finished importing post-populate DDL into DB");
-  }
+  $self->do_post_ddl({schema=>$schema, post_ddl=>$params->{post_ddl}}) if $params->{post_ddl};
 
   $self->msg("- fixtures imported");
   $self->msg("- cleaning up");
@@ -868,6 +861,18 @@ sub populate {
   eval { $schema->storage->dbh->do('SET foreign_key_checks=1') };
 
   return 1;
+}
+
+sub do_post_ddl {
+  my ($self, $params) = @_;
+
+  my $schema = $params->{schema};
+  my $data = _read_sql($params->{post_ddl});
+  foreach (@$data) {
+    eval { $schema->storage->dbh->do($_) or warn "SQL was:\n $_"};
+         if ($@) { die "SQL was:\n $_\n$@"; }
+  }
+  $self->msg("- finished importing post-populate DDL into DB");
 }
 
 sub msg {
