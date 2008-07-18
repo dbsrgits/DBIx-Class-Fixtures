@@ -339,9 +339,12 @@ Same as with L</SET ATTRIBUTES>
 
 =back
 
-Returns a new DBIx::Class::Fixture object. %attrs has only two valid keys at the
-moment - 'debug' which determines whether to be verbose and 'config_dir' which is required and much contain a valid path to
-the directory in which your .json configs reside.
+Returns a new DBIx::Class::Fixture object. %attrs can have the following parameters:
+
+- config_dir: required. must contain a valid path to the directory in which your .json configs reside.
+- debug: determines whether to be verbose
+- ignore_sql_errors: ignore errors on import of DDL etc
+
 
   my $fixtures = DBIx::Class::Fixtures->new({ config_dir => '/home/me/app/fixture_configs' });
 
@@ -367,7 +370,8 @@ sub new {
   my $self = {
               config_dir => $config_dir,
               _inherited_attributes => [qw/datetime_relative might_have rules/],
-              debug => $params->{debug}
+              debug => $params->{debug},
+              ignore_sql_errors => $params->{ignore_sql_errors}
   };
 
   bless $self, $class;
@@ -709,7 +713,7 @@ sub _generate_schema {
   my $data = _read_sql($ddl_file);
   foreach (@$data) {
     eval { $dbh->do($_) or warn "SQL was:\n $_"};
-	  if ($@) { die "SQL was:\n $_\n$@"; }
+	  if ($@ && !$self->{ignore_sql_errors}) { die "SQL was:\n $_\n$@"; }
   }
   $self->msg("- finished importing DDL into DB");
 
@@ -817,8 +821,6 @@ sub populate {
   $self->msg("- creating temp dir");
   dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for grep { -e dir($fixture_dir, $schema->source($_)->from) } $schema->sources;
 
-  eval { $schema->storage->dbh->do('SET foreign_key_checks=0') };
-
   my $fixup_visitor;
   my $formatter= $schema->storage->datetime_parser;
   unless ($@ || !$formatter) {
@@ -835,23 +837,36 @@ sub populate {
     $callbacks{object} ||= "visit_ref";	
     $fixup_visitor = new Data::Visitor::Callback(%callbacks);
   }
-  foreach my $source (sort $schema->sources) {
-    $self->msg("- adding " . $source);
-    my $rs = $schema->resultset($source);
-    my $source_dir = dir($tmp_fixture_dir, lc($rs->result_source->from));
-    next unless (-e $source_dir);
-    my @rows;
-    while (my $file = $source_dir->next) {
-      next unless ($file =~ /\.fix$/);
-      next if $file->is_dir;
-      my $contents = $file->slurp;
-      my $HASH1;
-      eval($contents);
-      $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
-      push(@rows, $HASH1);
-    }
-    $rs->populate(\@rows);
+
+  my $db = $schema->storage->dbh->{Driver}->{Name};
+  my $dbi_class = "DBIx::Class::Fixtures::DBI::$db";
+
+  eval "require $dbi_class";
+  if ($@) {
+    $dbi_class = "DBIx::Class::Fixtures::DBI";
+    eval "require $dbi_class";
+    die $@ if $@;
   }
+
+  $dbi_class->do_insert($schema, sub {
+    foreach my $source (sort $schema->sources) {
+      $self->msg("- adding " . $source);
+      my $rs = $schema->resultset($source);
+      my $source_dir = dir($tmp_fixture_dir, lc($rs->result_source->from));
+      next unless (-e $source_dir);
+      my @rows;
+      while (my $file = $source_dir->next) {
+        next unless ($file =~ /\.fix$/);
+        next if $file->is_dir;
+        my $contents = $file->slurp;
+        my $HASH1;
+        eval($contents);
+        $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
+        push(@rows, $HASH1);
+      }
+      $rs->populate(\@rows);
+    }
+  });
 
   $self->do_post_ddl({schema=>$schema, post_ddl=>$params->{post_ddl}}) if $params->{post_ddl};
 
@@ -870,7 +885,7 @@ sub do_post_ddl {
   my $data = _read_sql($params->{post_ddl});
   foreach (@$data) {
     eval { $schema->storage->dbh->do($_) or warn "SQL was:\n $_"};
-         if ($@) { die "SQL was:\n $_\n$@"; }
+	  if ($@ && !$self->{ignore_sql_errors}) { die "SQL was:\n $_\n$@"; }
   }
   $self->msg("- finished importing post-populate DDL into DB");
 }
