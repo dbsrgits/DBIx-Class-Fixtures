@@ -498,6 +498,7 @@ sub dump {
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
   my %options = ( is_root => 1 );
+  $self->{queue} = [];
   foreach my $source (@sources) {
     # apply rule to set if specified
     my $rule = $config->{rules}->{$source->{class}};
@@ -541,6 +542,10 @@ sub dump {
       $self->dump_object($object, { %options, %source_options } );
       next;
     }
+  }
+
+  while (my $entry = shift @{$self->{queue}}) {
+    $self->dump_object(@$entry);
   }
 
   foreach my $dir ($output_dir->children) {
@@ -864,7 +869,7 @@ sub populate {
         $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
         push(@rows, $HASH1);
       }
-      $rs->populate(\@rows);
+      $rs->populate(\@rows) if (scalar(@rows));
     }
   });
 
