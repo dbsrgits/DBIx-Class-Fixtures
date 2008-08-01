@@ -370,7 +370,7 @@ sub new {
   my $self = {
               config_dir => $config_dir,
               _inherited_attributes => [qw/datetime_relative might_have rules/],
-              debug => $params->{debug},
+              debug => $params->{debug} || 0,
               ignore_sql_errors => $params->{ignore_sql_errors}
   };
 
@@ -548,9 +548,16 @@ sub dump {
     $self->dump_object(@$entry);
   }
 
-  foreach my $dir ($output_dir->children) {
-    next if ($dir eq $tmp_output_dir);
-    $dir->remove || $dir->rmtree;
+  # clear existing output dir
+  foreach my $child ($output_dir->children) {
+    if ($child->is_dir) {
+      next if ($child eq $tmp_output_dir);
+      if (grep { $_ =~ /\.fix/ } $child->children) {
+        $child->rmtree;
+      }
+    } elsif ($child =~ /_dumper_version$/) {
+      $child->remove;
+    }
   }
 
   $self->msg("- moving temp dir to $output_dir");
