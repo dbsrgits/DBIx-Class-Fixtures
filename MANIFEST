@@ -12,6 +12,7 @@ inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/DBIx/Class/Fixtures.pm
 lib/DBIx/Class/Fixtures/DBI.pm
+lib/DBIx/Class/Fixtures/DBI/mysql.pm
 lib/DBIx/Class/Fixtures/DBI/Pg.pm
 lib/DBIx/Class/Fixtures/Schema.pm
 lib/DBIx/Class/Fixtures/SchemaVersioned.pm
@@ -31,6 +32,7 @@ t/07-dump-all.t
 t/07-dump-includes.t
 t/08-dump-includes.t
 t/09-dump-scalar-ref.t
+t/10-dump-cleanup.t
 t/12-populate-basic.t
 t/13populate-two-dbs.t
 t/14-populate-post.t

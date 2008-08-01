@@ -3,6 +3,7 @@ Revision history for DBIx-Class-Fixtures
 1.001001
 - debug defaults to 0 rather than undef
 - cleanup only deletes what's necessary
+- added db specific dbi files so that postgres can use deferrable
 
 1.001000
 - Added includes functionality
