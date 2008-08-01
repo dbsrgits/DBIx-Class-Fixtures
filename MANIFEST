@@ -18,8 +18,8 @@ lib/DBIx/Class/Fixtures/Schema.pm
 lib/DBIx/Class/Fixtures/SchemaVersioned.pm
 lib/DBIx/Class/Fixtures/Versioned.pm
 Makefile.PL
-MANIFEST
-META.yml			Module meta-data (added by MakeMaker)
+MANIFEST			This list of files
+META.yml
 README
 t/00-load.t
 t/01-new.t
@@ -29,7 +29,6 @@ t/04-dump-fetch.t
 t/05-dump-rules.t
 t/06-dump-date.t
 t/07-dump-all.t
-t/07-dump-includes.t
 t/08-dump-includes.t
 t/09-dump-scalar-ref.t
 t/10-dump-cleanup.t
@@ -62,10 +61,3 @@ t/var/configs/scalar_ref.json
 t/var/configs/simple.json
 t/var/DBIxClass.db
 t/var/DBIxClassDifferent.db
-t/var/fixtures/_dumper_version
-t/var/fixtures/artist/1.fix
-t/var/fixtures/artist/2.fix
-t/var/fixtures/cd/2.fix
-t/var/fixtures/cd/5.fix
-t/var/fixtures/track/14.fix
-t/var/fixtures/track/5.fix
