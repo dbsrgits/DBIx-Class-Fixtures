@@ -470,7 +470,6 @@ sub dump {
     $config->{belongs_to} = { fetch => 1 } unless (exists $config->{belongs_to});
   } elsif ($params->{all}) {
     $config = { might_have => { fetch => 0 }, has_many => { fetch => 0 }, belongs_to => { fetch => 0 }, sets => [map {{ class => $_, quantity => 'all' }} $schema->sources] };
-    print Dumper($config);
   } else {
     return DBIx::Class::Exception->throw('must pass config or set all');
   }
@@ -765,6 +764,7 @@ sub _read_sql {
     connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'], # database to clear, deploy and then populate
     post_ddl => '/home/me/app/sql/post_ddl.sql', # DDL to deploy after populating records, ie. FK constraints
     cascade => 1, # use CASCADE option when dropping tables
+    no_populate => 0, # optional, set to 1 to run ddl but not populate 
   });
 
 In this case the database app_dev will be cleared of all tables, then the specified DDL deployed to it,
@@ -818,6 +818,9 @@ sub populate {
   }
 
   my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => delete $params->{connection_details}, %{$params} });
+
+  return 1 if $params->{no_populate}; 
+  
   $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
 
@@ -850,17 +853,7 @@ sub populate {
     $fixup_visitor = new Data::Visitor::Callback(%callbacks);
   }
 
-  my $db = $schema->storage->dbh->{Driver}->{Name};
-  my $dbi_class = "DBIx::Class::Fixtures::DBI::$db";
-
-  eval "require $dbi_class";
-  if ($@) {
-    $dbi_class = "DBIx::Class::Fixtures::DBI";
-    eval "require $dbi_class";
-    die $@ if $@;
-  }
-
-  $dbi_class->do_insert($schema, sub {
+  $schema->storage->with_deferred_fk_checks(sub {
     foreach my $source (sort $schema->sources) {
       $self->msg("- adding " . $source);
       my $rs = $schema->resultset($source);
@@ -885,8 +878,6 @@ sub populate {
   $self->msg("- fixtures imported");
   $self->msg("- cleaning up");
   $tmp_fixture_dir->rmtree;
-  eval { $schema->storage->dbh->do('SET foreign_key_checks=1') };
-
   return 1;
 }
 
