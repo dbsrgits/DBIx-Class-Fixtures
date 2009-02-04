@@ -713,10 +713,11 @@ sub _generate_schema {
 
   # clear existing db
   $self->msg("- clearing DB of existing tables");
-  eval { $dbh->do('SET foreign_key_checks=0') };
-  foreach my $table (@tables) {
-    eval { $dbh->do('drop table ' . $table . ($params->{cascade} ? ' cascade' : '') ) };
-  }
+  $pre_schema->storage->with_deferred_fk_checks(sub {
+    foreach my $table (@tables) {
+      eval { $dbh->do('drop table ' . $table . ($params->{cascade} ? ' cascade' : '') ) };
+    }
+  });
 
   # import new ddl file to db
   my $ddl_file = $params->{ddl};
