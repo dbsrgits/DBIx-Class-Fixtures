@@ -768,20 +768,32 @@ sub _read_sql {
     no_populate => 0, # optional, set to 1 to run ddl but not populate 
   });
 
-In this case the database app_dev will be cleared of all tables, then the specified DDL deployed to it,
-then finally all fixtures found in /home/me/app/fixtures will be added to it. populate will generate
-its own DBIx::Class schema from the DDL rather than being passed one to use. This is better as
-custom insert methods are avoided which can to get in the way. In some cases you might not
-have a DDL, and so this method will eventually allow a $schema object to be passed instead.
+In this case the database app_dev will be cleared of all tables, then the
+specified DDL deployed to it, then finally all fixtures found in
+/home/me/app/fixtures will be added to it. populate will generate its own
+DBIx::Class schema from the DDL rather than being passed one to use. This is
+better as custom insert methods are avoided which can to get in the way. In
+some cases you might not have a DDL, and so this method will eventually allow a
+$schema object to be passed instead.
 
-If needed, you can specify a post_ddl attribute which is a DDL to be applied after all the fixtures
-have been added to the database. A good use of this option would be to add foreign key constraints
-since databases like Postgresql cannot disable foreign key checks.
+If needed, you can specify a post_ddl attribute which is a DDL to be applied
+after all the fixtures have been added to the database. A good use of this
+option would be to add foreign key constraints since databases like Postgresql
+cannot disable foreign key checks.
 
-If your tables have foreign key constraints you may want to use the cascade attribute which will
-make the drop table functionality cascade, ie 'DROP TABLE $table CASCADE'.
+If your tables have foreign key constraints you may want to use the cascade
+attribute which will make the drop table functionality cascade, ie 'DROP TABLE
+$table CASCADE'.
 
-directory, dll and connection_details are all required attributes.
+C<directory> is a required attribute. 
+
+If you wish for DBIx::Class::Fixtures to clear the database for you pass in
+C<dll> (path to a DDL sql file) and C<connection_details> (array ref  of DSN,
+user and pass).
+
+If you wish to deal with cleaning the schema yourself, then pass in a C<schema>
+attribute containing the connected schema you wish to operate on and set the
+C<no_deploy> attribute.
 
 =cut
 
@@ -803,7 +815,8 @@ sub populate {
   }
 
   my $ddl_file;
-  my $dbh;  
+  my $dbh;
+  my $schema;
   if ($params->{ddl} && $params->{connection_details}) {
     $ddl_file = file(delete $params->{ddl});
     unless (-e $ddl_file) {
@@ -812,13 +825,13 @@ sub populate {
     unless (ref $params->{connection_details} eq 'ARRAY') {
       return DBIx::Class::Exception->throw('connection details must be an arrayref');
     }
-  } elsif ($params->{schema}) {
-    return DBIx::Class::Exception->throw('passing a schema is not supported at the moment');
+    $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => delete $params->{connection_details}, %{$params} });
+  } elsif ($params->{schema} && $params->{no_deploy}) {
+    $schema = $params->{schema};
   } else {
     return DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
   }
 
-  my $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => delete $params->{connection_details}, %{$params} });
 
   return 1 if $params->{no_populate}; 
   
@@ -835,7 +848,14 @@ sub populate {
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
-  dircopy(dir($fixture_dir, $schema->source($_)->from), dir($tmp_fixture_dir, $schema->source($_)->from)) for grep { -e dir($fixture_dir, $schema->source($_)->from) } $schema->sources;
+  dircopy(
+      dir($fixture_dir, $schema->source($_)->from), 
+      dir($tmp_fixture_dir, $schema->source($_)->from)
+    ) for grep { -e dir($fixture_dir, $schema->source($_)->from) } $schema->sources;
+
+  unless (-d $tmp_fixture_dir) {
+    return DBIx::Class::Exception->throw("Unable to create temporary fixtures dir: $tmp_fixture_dir: $!");
+  }
 
   my $fixup_visitor;
   my $formatter= $schema->storage->datetime_parser;

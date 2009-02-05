@@ -1,5 +1,9 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001002
+- Allow passing schema object to ->populate
+- Check that fixture population dir was created
+
 1.001001
 - debug defaults to 0 rather than undef
 - cleanup only deletes what's necessary
