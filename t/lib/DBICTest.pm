@@ -48,9 +48,11 @@ sub init_schema {
 
     my $db_file = "t/var/DBIxClass.db";
 
-    unlink($db_file) if -e $db_file;
-    unlink($db_file . "-journal") if -e $db_file . "-journal";
     mkdir("t/var") unless -d "t/var";
+    if ( !$args{no_deploy} ) {
+      unlink($db_file) if -e $db_file;
+      unlink($db_file . "-journal") if -e $db_file . "-journal";
+    }
 
     my $dsn = $args{"dsn"} || "dbi:SQLite:${db_file}";
     my $dbuser = $args{"user"} || '';

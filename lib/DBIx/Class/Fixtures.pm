@@ -3,10 +3,10 @@ package DBIx::Class::Fixtures;
 use strict;
 use warnings;
 
+use DBIx::Class 0.08099_07;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
 use Path::Class qw(dir file);
-use File::Slurp;
 use Config::Any::JSON;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
@@ -21,7 +21,8 @@ use base qw(Class::Accessor::Grouped);
 
 our $namespace_counter = 0;
 
-__PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir _inherited_attributes debug schema_class/);
+__PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
+    _inherited_attributes debug schema_class dumped_objects/);
 
 =head1 VERSION
 
@@ -37,115 +38,135 @@ DBIx::Class::Fixtures
 
 =head1 SYNOPSIS
 
-  use DBIx::Class::Fixtures;
+ use DBIx::Class::Fixtures;
 
-  ...
+ ...
 
-  my $fixtures = DBIx::Class::Fixtures->new({ config_dir => '/home/me/app/fixture_configs' });
+ my $fixtures = DBIx::Class::Fixtures->new({ 
+     config_dir => '/home/me/app/fixture_configs' 
+ });
 
-  $fixtures->dump({
-    config => 'set_config.json',
-    schema => $source_dbic_schema,
-    directory => '/home/me/app/fixtures'
-  });
+ $fixtures->dump({
+   config => 'set_config.json',
+   schema => $source_dbic_schema,
+   directory => '/home/me/app/fixtures'
+ });
 
-  $fixtures->populate({
-    directory => '/home/me/app/fixtures',
-    ddl => '/home/me/app/sql/ddl.sql',
-    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'],
-    post_ddl => '/home/me/app/sql/post_ddl.sql',
-  });
+ $fixtures->populate({
+   directory => '/home/me/app/fixtures',
+   ddl => '/home/me/app/sql/ddl.sql',
+   connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'],
+   post_ddl => '/home/me/app/sql/post_ddl.sql',
+ });
 
 =head1 DESCRIPTION
 
-Dump fixtures from source database to filesystem then import to another database (with same schema)
-at any time. Use as a constant dataset for running tests against or for populating development databases
-when impractical to use production clones. Describe fixture set using relations and conditions based 
-on your DBIx::Class schema.
+Dump fixtures from source database to filesystem then import to another
+database (with same schema) at any time. Use as a constant dataset for running
+tests against or for populating development databases when impractical to use
+production clones. Describe fixture set using relations and conditions based on
+your DBIx::Class schema.
 
 =head1 DEFINE YOUR FIXTURE SET
 
-Fixture sets are currently defined in .json files which must reside in your config_dir 
-(e.g. /home/me/app/fixture_configs/a_fixture_set.json). They describe which data to pull and dump 
-from the source database.
+Fixture sets are currently defined in .json files which must reside in your
+config_dir (e.g. /home/me/app/fixture_configs/a_fixture_set.json). They
+describe which data to pull and dump from the source database.
 
 For example:
 
-    {
-        sets: [{
-            class: 'Artist',
-            ids: ['1', '3']
-        }, {
-            class: 'Producer',
-            ids: ['5'],
-            fetch: [{
-                rel: 'artists',
-                quantity: '2'
-            }]
-        }] 
-    }
+ {
+   sets: [
+     {
+       class: 'Artist',
+       ids: ['1', '3']
+     },
+     {
+       class: 'Producer',
+       ids: ['5'],
+       fetch: [
+         {
+           rel: 'artists',
+           quantity: '2'
+         }
+       ]
+     }
+   ] 
+ }
 
-This will fetch artists with primary keys 1 and 3, the producer with primary key 5 and two of producer 5's 
-artists where 'artists' is a has_many DBIx::Class rel from Producer to Artist.
+This will fetch artists with primary keys 1 and 3, the producer with primary
+key 5 and two of producer 5's artists where 'artists' is a has_many DBIx::Class
+rel from Producer to Artist.
 
 The top level attributes are as follows:
 
 =head2 sets
 
-Sets must be an array of hashes, as in the example given above. Each set defines a set of objects to be
-included in the fixtures. For details on valid set attributes see L</SET ATTRIBUTES> below.
+Sets must be an array of hashes, as in the example given above. Each set
+defines a set of objects to be included in the fixtures. For details on valid
+set attributes see L</SET ATTRIBUTES> below.
 
 =head2 rules
 
-Rules place general conditions on classes. For example if whenever an artist was dumped you also wanted all
-of their cds dumped too, then you could use a rule to specify this. For example:
+Rules place general conditions on classes. For example if whenever an artist
+was dumped you also wanted all of their cds dumped too, then you could use a
+rule to specify this. For example:
 
+ {
+   sets: [
+     {
+       class: 'Artist',
+       ids: ['1', '3']
+     }, 
+     {
+       class: 'Producer',
+       ids: ['5'],
+       fetch: [
+         { 
+           rel: 'artists',
+           quantity: '2'
+         }
+       ]
+     }
+   ],
+   rules: {
+     Artist: {
+       fetch: [ {
+         rel: 'cds',
+         quantity: 'all'
+       } ]
+     }
+   }
+ }
+
+In this case all the cds of artists 1, 3 and all producer 5's artists will be
+dumped as well. Note that 'cds' is a has_many DBIx::Class relation from Artist
+to CD. This is eqivalent to:
+
+ {
+   sets: [
     {
-        sets: [{
-            class: 'Artist',
-            ids: ['1', '3']
-        }, {
-            class: 'Producer',
-            ids: ['5'],
-            fetch: [{ 
-                rel: 'artists',
-                quantity: '2'
-            }]
-        }],
-        rules: {
-            Artist: {
-                fetch: [{
-                    rel: 'cds',
-                    quantity: 'all'
-                }]
-            }
-        }
-    }
-
-In this case all the cds of artists 1, 3 and all producer 5's artists will be dumped as well. Note that 'cds' is a
-has_many DBIx::Class relation from Artist to CD. This is eqivalent to:
-
-    {
-        sets: [{
-            class: 'Artist',
-            ids: ['1', '3'],
-            fetch: [{
-                rel: 'cds',
-                quantity: 'all'
-            }]
-        }, {
-            class: 'Producer',
-            ids: ['5'],
-            fetch: [{ 
-                rel: 'artists',
-                quantity: '2',
-                fetch: [{
-                    rel: 'cds',
-                    quantity: 'all'
-                }]
-            }]
-        }]
-    }
+       class: 'Artist',
+       ids: ['1', '3'],
+       fetch: [ {
+         rel: 'cds',
+         quantity: 'all'
+       } ]
+     }, 
+     {
+       class: 'Producer',
+       ids: ['5'],
+       fetch: [ { 
+         rel: 'artists',
+         quantity: '2',
+         fetch: [ {
+           rel: 'cds',
+           quantity: 'all'
+         } ]
+       } ]
+     }
+   ]
+ }
 
 rules must be a hash keyed by class name.
 
@@ -153,59 +174,66 @@ L</RULE ATTRIBUTES>
 
 =head2 includes
 
-To prevent repetition between configs you can include other configs. For example:
+To prevent repetition between configs you can include other configs. For
+example:
 
-    {
-        sets: [{
-            class: 'Producer',
-            ids: ['5']
-        }],
-        includes: [{
-            file: 'base.json'
-        }]
-    }
+ {
+   sets: [ {
+     class: 'Producer',
+     ids: ['5']
+   } ],
+   includes: [
+     { file: 'base.json' }
+   ]
+ }
 
-Includes must be an arrayref of hashrefs where the hashrefs have key 'file' which is the name of another config
-file in the same directory. The original config is merged with its includes using Hash::Merge.
+Includes must be an arrayref of hashrefs where the hashrefs have key 'file'
+which is the name of another config file in the same directory. The original
+config is merged with its includes using L<Hash::Merge>.
 
 =head2 datetime_relative
 
-Only available for MySQL and PostgreSQL at the moment, must be a value that DateTime::Format::*
-can parse. For example:
+Only available for MySQL and PostgreSQL at the moment, must be a value that
+DateTime::Format::* can parse. For example:
 
-    {
-        sets: [{
-            class: 'RecentItems',
-            ids: ['9']
-        }],
-        datetime_relative : "2007-10-30 00:00:00"
-    }
+ {
+   sets: [ {
+     class: 'RecentItems',
+     ids: ['9']
+   } ],
+   datetime_relative : "2007-10-30 00:00:00"
+ }
 
-This will work when dumping from a MySQL database and will cause any datetime fields (where datatype => 'datetime' 
-in the column def of the schema class) to be dumped as a DateTime::Duration object relative to the date specified in
-the datetime_relative value. For example if the RecentItem object had a date field set to 2007-10-25, then when the
-fixture is imported the field will be set to 5 days in the past relative to the current time.
+This will work when dumping from a MySQL database and will cause any datetime
+fields (where datatype => 'datetime' in the column def of the schema class) to
+be dumped as a DateTime::Duration object relative to the date specified in the
+datetime_relative value. For example if the RecentItem object had a date field
+set to 2007-10-25, then when the fixture is imported the field will be set to 5
+days in the past relative to the current time.
 
 =head2 might_have
 
-Specifies whether to automatically dump might_have relationships. Should be a hash with one attribute - fetch. Set fetch to 1 or 0.
+Specifies whether to automatically dump might_have relationships. Should be a
+hash with one attribute - fetch. Set fetch to 1 or 0.
 
-    {
-        might_have: {
-            fetch: 1
-        },
-        sets: [{
-            class: 'Artist',
-            ids: ['1', '3']
-        }, {
-            class: 'Producer',
-            ids: ['5']
-        }]
-    }
+ {
+   might_have: { fetch: 1 },
+   sets: [
+     {
+       class: 'Artist',
+       ids: ['1', '3']
+     },
+     {
+       class: 'Producer',
+       ids: ['5']
+     }
+   ]
+ }
 
-Note: belongs_to rels are automatically dumped whether you like it or not, this is to avoid FKs to nowhere when importing.
-General rules on has_many rels are not accepted at this top level, but you can turn them on for individual
-sets - see L</SET ATTRIBUTES>.
+Note: belongs_to rels are automatically dumped whether you like it or not, this
+is to avoid FKs to nowhere when importing.  General rules on has_many rels are
+not accepted at this top level, but you can turn them on for individual sets -
+see L</SET ATTRIBUTES>.
 
 =head1 SET ATTRIBUTES
 
@@ -215,57 +243,62 @@ Required attribute. Specifies the DBIx::Class object class you wish to dump.
 
 =head2 ids
 
-Array of primary key ids to fetch, basically causing an $rs->find($_) for each. If the id is not in the source db then it
-just won't get dumped, no warnings or death.
+Array of primary key ids to fetch, basically causing an $rs->find($_) for each.
+If the id is not in the source db then it just won't get dumped, no warnings or
+death.
 
 =head2 quantity
 
-Must be either an integer or the string 'all'. Specifying an integer will effectively set the 'rows' attribute on the resultset clause,
-specifying 'all' will cause the rows attribute to be left off and for all matching rows to be dumped. There's no randomising
-here, it's just the first x rows.
+Must be either an integer or the string 'all'. Specifying an integer will
+effectively set the 'rows' attribute on the resultset clause, specifying 'all'
+will cause the rows attribute to be left off and for all matching rows to be
+dumped. There's no randomising here, it's just the first x rows.
 
 =head2 cond
 
-A hash specifying the conditions dumped objects must match. Essentially this is a JSON representation of a DBIx::Class search clause. For example:
+A hash specifying the conditions dumped objects must match. Essentially this is
+a JSON representation of a DBIx::Class search clause. For example:
 
-    {
-        sets: [{
-            class: 'Artist',
-            quantiy: 'all',
-            cond: { name: 'Dave' }
-        }]
-    }
+ {
+   sets: [{
+     class: 'Artist',
+     quantiy: 'all',
+     cond: { name: 'Dave' }
+   }]
+ }
 
-This will dump all artists whose name is 'dave'. Essentially $artist_rs->search({ name => 'Dave' })->all.
+This will dump all artists whose name is 'dave'. Essentially
+$artist_rs->search({ name => 'Dave' })->all.
 
 Sometimes in a search clause it's useful to use scalar refs to do things like:
 
-$artist_rs->search({ no1_singles => \'> no1_albums' })
+ $artist_rs->search({ no1_singles => \'> no1_albums' })
 
 This could be specified in the cond hash like so:
 
-    {
-        sets: [{
-            class: 'Artist',
-            quantiy: 'all',
-            cond: { no1_singles: '\> no1_albums' }
-        }]
-    }
+ {
+   sets: [ {
+     class: 'Artist',
+     quantiy: 'all',
+     cond: { no1_singles: '\> no1_albums' }
+   } ]
+ }
 
-So if the value starts with a backslash the value is made a scalar ref before being passed to search.
+So if the value starts with a backslash the value is made a scalar ref before
+being passed to search.
 
 =head2 join
 
 An array of relationships to be used in the cond clause.
 
-    {
-        sets: [{
-            class: 'Artist',
-            quantiy: 'all',
-            cond: { 'cds.position': { '>': 4 } },
-            join: ['cds']
-        }]
-    }
+ {
+   sets: [ {
+     class: 'Artist',
+     quantiy: 'all',
+     cond: { 'cds.position': { '>': 4 } },
+     join: ['cds']
+   } ]
+ }
 
 Fetch all artists who have cds with position greater than 4.
 
@@ -273,37 +306,42 @@ Fetch all artists who have cds with position greater than 4.
 
 Must be an array of hashes. Specifies which rels to also dump. For example:
 
-    {
-        sets: [{
-            class: 'Artist',
-            ids: ['1', '3'],
-            fetch: [{
-                rel: 'cds',
-                quantity: '3',
-                cond: { position: '2' }
-            }]
-        }]
-    }
+ {
+   sets: [ {
+     class: 'Artist',
+     ids: ['1', '3'],
+     fetch: [ {
+       rel: 'cds',
+       quantity: '3',
+       cond: { position: '2' }
+     } ]
+   } ]
+ }
 
 Will cause the cds of artists 1 and 3 to be dumped where the cd position is 2.
 
-Valid attributes are: 'rel', 'quantity', 'cond', 'has_many', 'might_have' and 'join'. rel is the name of the DBIx::Class
-rel to follow, the rest are the same as in the set attributes. quantity is necessary for has_many relationships,
-but not if using for belongs_to or might_have relationships.
+Valid attributes are: 'rel', 'quantity', 'cond', 'has_many', 'might_have' and
+'join'. rel is the name of the DBIx::Class rel to follow, the rest are the same
+as in the set attributes. quantity is necessary for has_many relationships, but
+not if using for belongs_to or might_have relationships.
 
 =head2 has_many
 
-Specifies whether to fetch has_many rels for this set. Must be a hash containing keys fetch and quantity. 
+Specifies whether to fetch has_many rels for this set. Must be a hash
+containing keys fetch and quantity. 
 
-Set fetch to 1 if you want to fetch them, and quantity to either 'all' or an integer.
+Set fetch to 1 if you want to fetch them, and quantity to either 'all' or an
+integer.
 
 Be careful here, dumping has_many rels can lead to a lot of data being dumped.
 
 =head2 might_have
 
-As with has_many but for might_have relationships. Quantity doesn't do anything in this case.
+As with has_many but for might_have relationships. Quantity doesn't do anything
+in this case.
 
-This value will be inherited by all fetches in this set. This is not true for the has_many attribute.
+This value will be inherited by all fetches in this set. This is not true for
+the has_many attribute.
 
 =head1 RULE ATTRIBUTES
 
@@ -339,14 +377,29 @@ Same as with L</SET ATTRIBUTES>
 
 =back
 
-Returns a new DBIx::Class::Fixture object. %attrs can have the following parameters:
+Returns a new DBIx::Class::Fixture object. %attrs can have the following
+parameters:
 
-- config_dir: required. must contain a valid path to the directory in which your .json configs reside.
-- debug: determines whether to be verbose
-- ignore_sql_errors: ignore errors on import of DDL etc
+=over
 
+=item config_dir: 
 
-  my $fixtures = DBIx::Class::Fixtures->new({ config_dir => '/home/me/app/fixture_configs' });
+required. must contain a valid path to the directory in which your .json
+configs reside.
+
+=item debug: 
+
+determines whether to be verbose
+
+=item ignore_sql_errors: 
+
+ignore errors on import of DDL etc
+
+=back
+
+ my $fixtures = DBIx::Class::Fixtures->new( {
+   config_dir => '/home/me/app/fixture_configs'
+ } );
 
 =cut
 
@@ -376,6 +429,8 @@ sub new {
 
   bless $self, $class;
 
+  $self->dumped_objects({});
+
   return $self;
 }
 
@@ -389,25 +444,27 @@ sub new {
 
 =back
 
-  $fixtures->dump({
-    config => 'set_config.json', # config file to use. must be in the config directory specified in the constructor
-    schema => $source_dbic_schema,
-    directory => '/home/me/app/fixtures' # output directory
-  });
+ $fixtures->dump({
+   config => 'set_config.json', # config file to use. must be in the config
+                                # directory specified in the constructor
+   schema => $source_dbic_schema,
+   directory => '/home/me/app/fixtures' # output directory
+ });
 
-  or
+or
 
-  $fixtures->dump({
-    all => 1, # just dump everything that's in the schema
-    schema => $source_dbic_schema,
-    directory => '/home/me/app/fixtures' # output directory
-  });
+ $fixtures->dump({
+   all => 1, # just dump everything that's in the schema
+   schema => $source_dbic_schema,
+   directory => '/home/me/app/fixtures' # output directory
+ });
 
-In this case objects will be dumped to subdirectories in the specified directory. For example:
+In this case objects will be dumped to subdirectories in the specified
+directory. For example:
 
-  /home/me/app/fixtures/artist/1.fix
-  /home/me/app/fixtures/artist/3.fix
-  /home/me/app/fixtures/producer/5.fix
+ /home/me/app/fixtures/artist/1.fix
+ /home/me/app/fixtures/artist/3.fix
+ /home/me/app/fixtures/producer/5.fix
 
 schema and directory are required attributes. also, one of config or all must be specified.
 
@@ -428,56 +485,26 @@ sub dump {
   }
 
   my $schema = $params->{schema};
-  my $config_file;
   my $config;
   if ($params->{config}) {
     #read config
-    $config_file = file($self->config_dir, $params->{config});
-    unless (-e $config_file) {
-      return DBIx::Class::Exception->throw('config does not exist at ' . $config_file);
-    }
-    $config = Config::Any::JSON->load($config_file);
-
-    #process includes
-    if ($config->{includes}) {
-      $self->msg($config->{includes});
-      unless (ref $config->{includes} eq 'ARRAY') {
-        return DBIx::Class::Exception->throw('includes params of config must be an array ref of hashrefs');
-      }
-      foreach my $include_config (@{$config->{includes}}) {
-        unless ((ref $include_config eq 'HASH') && $include_config->{file}) {
-          return DBIx::Class::Exception->throw('includes params of config must be an array ref of hashrefs');
-        }
-        
-        my $include_file = file($self->config_dir, $include_config->{file});
-        unless (-e $include_file) {
-          return DBIx::Class::Exception->throw('config does not exist at ' . $include_file);
-        }
-        my $include = Config::Any::JSON->load($include_file);
-        $self->msg($include);
-        $config = merge( $config, $include );
-      }
-      delete $config->{includes};
-    }
-    
-    # validate config
-    unless ($config && $config->{sets} && ref $config->{sets} eq 'ARRAY' && scalar(@{$config->{sets}})) {
-      return DBIx::Class::Exception->throw('config has no sets');
-    }
-	
-    $config->{might_have} = { fetch => 0 } unless (exists $config->{might_have});
-    $config->{has_many} = { fetch => 0 } unless (exists $config->{has_many});
-    $config->{belongs_to} = { fetch => 1 } unless (exists $config->{belongs_to});
+    my $config_file = $self->config_dir->file($params->{config});
+    $config = $self->load_config_file($config_file);
   } elsif ($params->{all}) {
-    $config = { might_have => { fetch => 0 }, has_many => { fetch => 0 }, belongs_to => { fetch => 0 }, sets => [map {{ class => $_, quantity => 'all' }} $schema->sources] };
+    $config = { 
+      might_have => { fetch => 0 },
+      has_many => { fetch => 0 },
+      belongs_to => { fetch => 0 },
+      sets => [map {{ class => $_, quantity => 'all' }} $schema->sources] 
+    };
   } else {
-    return DBIx::Class::Exception->throw('must pass config or set all');
+    DBIx::Class::Exception->throw('must pass config or set all');
   }
 
   my $output_dir = dir($params->{directory});
   unless (-e $output_dir) {
     $output_dir->mkpath ||
-      return DBIx::Class::Exception->throw('output directory does not exist at ' . $output_dir);
+    DBIx::Class::Exception->throw("output directory does not exist at $output_dir");
   }
 
   $self->msg("generating  fixtures");
@@ -491,13 +518,13 @@ sub dump {
   $tmp_output_dir->mkpath;
 
   # write version file (for the potential benefit of populate)
-  my $version_file = file($tmp_output_dir, '_dumper_version');
-  write_file($version_file->stringify, $VERSION);
+  $tmp_output_dir->file('_dumper_version')
+                 ->openw
+                 ->print($VERSION);
 
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
-  my %options = ( is_root => 1 );
-  $self->{queue} = [];
+
   foreach my $source (@sources) {
     # apply rule to set if specified
     my $rule = $config->{rules}->{$source->{class}};
@@ -507,44 +534,34 @@ sub dump {
     my $rs = $schema->resultset($source->{class});
 
     if ($source->{cond} and ref $source->{cond} eq 'HASH') {
-      # if value starts with / assume it's meant to be passed as a scalar ref to dbic
+      # if value starts with \ assume it's meant to be passed as a scalar ref to dbic
       # ideally this would substitute deeply
       $source->{cond} = { map { $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_} : $source->{cond}->{$_} } keys %{$source->{cond}} };
     }
 
     $rs = $rs->search($source->{cond}, { join => $source->{join} }) if ($source->{cond});
     $self->msg("- dumping $source->{class}");
-    my @objects;
     my %source_options = ( set => { %{$config}, %{$source} } );
     if ($source->{quantity}) {
       $rs = $rs->search({}, { order_by => $source->{order_by} }) if ($source->{order_by});
-      if ($source->{quantity} eq 'all') {
-        push (@objects, $rs->all);
-      } elsif ($source->{quantity} =~ /^\d+$/) {
-        push (@objects, $rs->search({}, { rows => $source->{quantity} }));
-      } else {
+      if ($source->{quantity} =~ /^\d+$/) {
+        $rs = $rs->search({}, { rows => $source->{quantity} });
+      } elsif ($source->{quantity} ne 'all') {
         DBIx::Class::Exception->throw('invalid value for quantity - ' . $source->{quantity});
       }
     }
-    if ($source->{ids}) {
+    elsif ($source->{ids} && @{$source->{ids}}) {
       my @ids = @{$source->{ids}};
-      my @id_objects = grep { $_ } map { $rs->find($_) } @ids;
-      push (@objects, @id_objects);
+      my (@pks) = $rs->result_source->primary_columns;
+      die "Can't dump multiple col-pks using 'id' option" if @pks > 1;
+      $rs = $rs->search_rs( { $pks[0] => { -in => \@ids } } );
     }
-    unless ($source->{quantity} || $source->{ids}) {
+    else {
       DBIx::Class::Exception->throw('must specify either quantity or ids');
     }
 
-    # dump objects
-    foreach my $object (@objects) {
-      $source_options{set_dir} = $tmp_output_dir;
-      $self->dump_object($object, { %options, %source_options } );
-      next;
-    }
-  }
-
-  while (my $entry = shift @{$self->{queue}}) {
-    $self->dump_object(@$entry);
+    $source_options{set_dir} = $tmp_output_dir;
+    $self->dump_rs($rs, \%source_options );
   }
 
   # clear existing output dir
@@ -560,7 +577,9 @@ sub dump {
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  move($_, dir($output_dir, $_->relative($_->parent)->stringify)) for $tmp_output_dir->children;
+  move($_, dir($output_dir, $_->relative($_->parent)->stringify)) 
+    for $tmp_output_dir->children;
+
   if (-e $output_dir) {
     $self->msg("- clearing tmp dir $tmp_output_dir");
     # delete existing fixture set
@@ -572,32 +591,91 @@ sub dump {
   return 1;
 }
 
+sub load_config_file {
+  my ($self, $config_file) = @_;
+  DBIx::Class::Exception->throw("config does not exist at $config_file")
+    unless -e $config_file;
+
+  my $config = Config::Any::JSON->load($config_file);
+
+  #process includes
+  if (my $incs = $config->{includes}) {
+    $self->msg($incs);
+    DBIx::Class::Exception->throw(
+      'includes params of config must be an array ref of hashrefs'
+    ) unless ref $incs eq 'ARRAY';
+    
+    foreach my $include_config (@$incs) {
+      DBIx::Class::Exception->throw(
+        'includes params of config must be an array ref of hashrefs'
+      ) unless (ref $include_config eq 'HASH') && $include_config->{file};
+      
+      my $include_file = $self->config_dir->file($include_config->{file});
+
+      DBIx::Class::Exception->throw("config does not exist at $include_file")
+        unless -e $include_file;
+      
+      my $include = Config::Any::JSON->load($include_file);
+      $self->msg($include);
+      $config = merge( $config, $include );
+    }
+    delete $config->{includes};
+  }
+  
+  # validate config
+  return DBIx::Class::Exception->throw('config has no sets')
+    unless $config && $config->{sets} && 
+           ref $config->{sets} eq 'ARRAY' && scalar @{$config->{sets}};
+
+  $config->{might_have} = { fetch => 0 } unless exists $config->{might_have};
+  $config->{has_many} = { fetch => 0 }   unless exists $config->{has_many};
+  $config->{belongs_to} = { fetch => 1 } unless exists $config->{belongs_to};
+
+  return $config;
+}
+
+sub dump_rs {
+    my ($self, $rs, $params) = @_;
+
+    while (my $row = $rs->next) {
+        $self->dump_object($row, $params);
+    }
+}
+ 
 sub dump_object {
-  my ($self, $object, $params, $rr_info) = @_;  
+  my ($self, $object, $params) = @_;  
   my $set = $params->{set};
   die 'no dir passed to dump_object' unless $params->{set_dir};
   die 'no object passed to dump_object' unless $object;
 
   my @inherited_attrs = @{$self->_inherited_attributes};
 
+  my @pk_vals = map {
+    $object->get_column($_) 
+  } $object->primary_columns;
+
+  my $key = join("\0", @pk_vals);
+
+  my $src = $object->result_source;
+  my $exists = $self->dumped_objects->{$src->name}{$key}++;
+
+
   # write dir and gen filename
-  my $source_dir = dir($params->{set_dir}, lc($object->result_source->from));
-  mkdir($source_dir->stringify, 0777);
+  my $source_dir = $params->{set_dir}->subdir(lc $src->from);
+  $source_dir->mkpath(0, 0777);
 
   # strip dir separators from file name
-  my $file = file($source_dir, join('-', map { 
-    ( my $a = $object->get_column($_) ) =~ s|[/\\]|_|g; $a;
-  } sort $object->primary_columns) . '.fix');
+  my $file = $source_dir->file(join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix');
+
 
   # write file
-  my $exists = (-e $file->stringify) ? 1 : 0;
   unless ($exists) {
     $self->msg('-- dumping ' . $file->stringify, 2);
     my %ds = $object->get_columns;
 
-    my $formatter= $object->result_source->schema->storage->datetime_parser;
     # mess with dates if specified
     if ($set->{datetime_relative}) {
+      my $formatter= $object->result_source->schema->storage->datetime_parser;
       unless ($@ || !$formatter) {
         my $dt;
         if ($set->{datetime_relative} eq 'today') {
@@ -622,21 +700,28 @@ sub dump_object {
 
     # do the actual dumping
     my $serialized = Dump(\%ds)->Out();
-    write_file($file->stringify, $serialized);
-    my $mode = 0777; chmod $mode, $file->stringify;  
+    $file->openw->print($serialized);
   }
 
   # don't bother looking at rels unless we are actually planning to dump at least one type
-  return unless ($set->{might_have}->{fetch} || $set->{belongs_to}->{fetch} || $set->{has_many}->{fetch} || $set->{fetch});
+  return unless $set->{might_have}->{fetch} 
+             || $set->{belongs_to}->{fetch} 
+             || $set->{has_many}->{fetch} 
+             || $set->{fetch};
 
   # dump rels of object
-  my $s = $object->result_source;
   unless ($exists) {
-    foreach my $name (sort $s->relationships) {
-      my $info = $s->relationship_info($name);
-      my $r_source = $s->related_source($name);
+    foreach my $name (sort $src->relationships) {
+      my $info = $src->relationship_info($name);
+      my $r_source = $src->related_source($name);
       # if belongs_to or might_have with might_have param set or has_many with has_many param set then
-      if (($info->{attrs}{accessor} eq 'single' && (!$info->{attrs}{join_type} || ($set->{might_have} && $set->{might_have}->{fetch}))) || $info->{attrs}{accessor} eq 'filter' || ($info->{attrs}{accessor} eq 'multi' && ($set->{has_many} && $set->{has_many}->{fetch}))) {
+      if (
+            (   $info->{attrs}{accessor} eq 'single' && 
+                (!$info->{attrs}{join_type} || ($set->{might_have} && $set->{might_have}->{fetch}))
+            ) || 
+            $info->{attrs}{accessor} eq 'filter' || 
+            ($info->{attrs}{accessor} eq 'multi' && ($set->{has_many} && $set->{has_many}->{fetch}))
+      ) {
         my $related_rs = $object->related_resultset($name);	  
         my $rule = $set->{rules}->{$related_rs->result_source->source_name};
         # these parts of the rule only apply to has_many rels
@@ -655,7 +740,7 @@ sub dump_object {
         #		use Data::Dumper; print ' -- ' . Dumper($c_params{set}, $rule->{fetch}) if ($rule && $rule->{fetch});
         $c_params{set} = merge( $c_params{set}, $rule) if ($rule && $rule->{fetch});
         #		use Data::Dumper; print ' -- ' . Dumper(\%c_params) if ($rule && $rule->{fetch});
-        $self->dump_object($_, \%c_params) foreach $related_rs->all;	  
+        $self->dump_rs($related_rs, \%c_params);
       }	
     }
   }
@@ -666,6 +751,7 @@ sub dump_object {
     $fetch->{$_} = $set->{$_} foreach grep { !$fetch->{$_} && $set->{$_} } @inherited_attrs;
     my $related_rs = $object->related_resultset($fetch->{rel});
     my $rule = $set->{rules}->{$related_rs->result_source->source_name};
+
     if ($rule) {
       my $info = $object->result_source->relationship_info($fetch->{rel});
       if ($info->{attrs}{accessor} eq 'multi') {
@@ -674,16 +760,27 @@ sub dump_object {
         $fetch = merge( $fetch, { fetch => $rule->{fetch} } );
       }
     } 
-    die "relationship " . $fetch->{rel} . " does not exist for " . $s->source_name unless ($related_rs);
+
+    die "relationship " . $fetch->{rel} . " does not exist for " . $src->source_name 
+      unless ($related_rs);
+
     if ($fetch->{cond} and ref $fetch->{cond} eq 'HASH') {
-      # if value starts with / assume it's meant to be passed as a scalar ref to dbic
+      # if value starts with \ assume it's meant to be passed as a scalar ref to dbic
       # ideally this would substitute deeply
-      $fetch->{cond} = { map { $_ => ($fetch->{cond}->{$_} =~ s/^\\//) ? \$fetch->{cond}->{$_} : $fetch->{cond}->{$_} } keys %{$fetch->{cond}} };
+      $fetch->{cond} = { map { 
+          $_ => ($fetch->{cond}->{$_} =~ s/^\\//) ? \$fetch->{cond}->{$_} 
+                                                  : $fetch->{cond}->{$_} 
+      } keys %{$fetch->{cond}} };
     }
-    $related_rs = $related_rs->search($fetch->{cond}, { join => $fetch->{join} }) if ($fetch->{cond});
-    $related_rs = $related_rs->search({}, { rows => $fetch->{quantity} }) if ($fetch->{quantity} && $fetch->{quantity} ne 'all');
-    $related_rs = $related_rs->search({}, { order_by => $fetch->{order_by} }) if ($fetch->{order_by});
-    $self->dump_object($_, { %{$params}, set => $fetch }) foreach $related_rs->all;
+
+    $related_rs = $related_rs->search($fetch->{cond}, { join => $fetch->{join} }) 
+      if ($fetch->{cond});
+    $related_rs = $related_rs->search({}, { rows => $fetch->{quantity} })
+      if ($fetch->{quantity} && $fetch->{quantity} ne 'all');
+    $related_rs = $related_rs->search({}, { order_by => $fetch->{order_by} })
+      if ($fetch->{order_by});
+
+    $self->dump_rs($related_rs, { %{$params}, set => $fetch });
   }
 }
 
@@ -700,9 +797,12 @@ sub _generate_schema {
 
   my $pre_schema;
   my $connection_details = $params->{connection_details};
+
   $namespace_counter++;
-  my $namespace = "DBIx::Class::Fixtures::GeneratedSchema_" . $namespace_counter;
+
+  my $namespace = "DBIx::Class::Fixtures::GeneratedSchema_$namespace_counter";
   Class::C3::Componentised->inject_base( $namespace => $schema_class );
+
   $pre_schema = $namespace->connect(@{$connection_details});
   unless( $pre_schema ) {
     return DBIx::Class::Exception->throw('connection details not valid');
@@ -715,7 +815,9 @@ sub _generate_schema {
   $self->msg("- clearing DB of existing tables");
   $pre_schema->storage->with_deferred_fk_checks(sub {
     foreach my $table (@tables) {
-      eval { $dbh->do('drop table ' . $table . ($params->{cascade} ? ' cascade' : '') ) };
+      eval { 
+        $dbh->do("drop table $table" . ($params->{cascade} ? ' cascade' : '') ) 
+      };
     }
   });
 
@@ -759,14 +861,30 @@ sub _read_sql {
 
 =back
 
-  $fixtures->populate({
-    directory => '/home/me/app/fixtures', # directory to look for fixtures in, as specified to dump
-    ddl => '/home/me/app/sql/ddl.sql', # DDL to deploy
-    connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'], # database to clear, deploy and then populate
-    post_ddl => '/home/me/app/sql/post_ddl.sql', # DDL to deploy after populating records, ie. FK constraints
-    cascade => 1, # use CASCADE option when dropping tables
-    no_populate => 0, # optional, set to 1 to run ddl but not populate 
-  });
+ $fixtures->populate( {
+   # directory to look for fixtures in, as specified to dump
+   directory => '/home/me/app/fixtures', 
+
+   # DDL to deploy
+   ddl => '/home/me/app/sql/ddl.sql', 
+
+   # database to clear, deploy and then populate
+   connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'], 
+
+   # DDL to deploy after populating records, ie. FK constraints
+   post_ddl => '/home/me/app/sql/post_ddl.sql',
+
+   # use CASCADE option when dropping tables
+   cascade => 1,
+
+   # optional, set to 1 to run ddl but not populate 
+   no_populate => 0,
+
+   # Dont try to clean the database, just populate over whats there. Requires
+   # schema option. Use this if you want to handle removing old data yourself
+   # no_deploy => 1
+   # schema => $schema
+ } );
 
 In this case the database app_dev will be cleared of all tables, then the
 specified DDL deployed to it, then finally all fixtures found in
@@ -825,7 +943,11 @@ sub populate {
     unless (ref $params->{connection_details} eq 'ARRAY') {
       return DBIx::Class::Exception->throw('connection details must be an arrayref');
     }
-    $schema = $self->_generate_schema({ ddl => $ddl_file, connection_details => delete $params->{connection_details}, %{$params} });
+    $schema = $self->_generate_schema({ 
+      ddl => $ddl_file, 
+      connection_details => delete $params->{connection_details},
+      %{$params}
+    });
   } elsif ($params->{schema} && $params->{no_deploy}) {
     $schema = $params->{schema};
   } else {
@@ -894,7 +1016,10 @@ sub populate {
     }
   });
 
-  $self->do_post_ddl({schema=>$schema, post_ddl=>$params->{post_ddl}}) if $params->{post_ddl};
+  $self->do_post_ddl( {
+    schema=>$schema, 
+    post_ddl=>$params->{post_ddl}
+  } ) if $params->{post_ddl};
 
   $self->msg("- fixtures imported");
   $self->msg("- cleaning up");
@@ -935,7 +1060,9 @@ sub msg {
 =head1 CONTRIBUTORS
 
   Ash Berlin <ash@shadowcatsystems.co.uk>
+
   Matt S. Trout <mst@shadowcatsystems.co.uk>
+
   Drew Taylor <taylor.andrew.j@gmail.com>
 
 =head1 LICENSE
