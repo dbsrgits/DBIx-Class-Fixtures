@@ -424,12 +424,11 @@ sub new {
               config_dir => $config_dir,
               _inherited_attributes => [qw/datetime_relative might_have rules/],
               debug => $params->{debug} || 0,
-              ignore_sql_errors => $params->{ignore_sql_errors}
+              ignore_sql_errors => $params->{ignore_sql_errors},
+              dumped_objects => {}
   };
 
   bless $self, $class;
-
-  $self->dumped_objects({});
 
   return $self;
 }
@@ -534,20 +533,30 @@ sub dump {
     my $rs = $schema->resultset($source->{class});
 
     if ($source->{cond} and ref $source->{cond} eq 'HASH') {
-      # if value starts with \ assume it's meant to be passed as a scalar ref to dbic
-      # ideally this would substitute deeply
-      $source->{cond} = { map { $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_} : $source->{cond}->{$_} } keys %{$source->{cond}} };
+      # if value starts with \ assume it's meant to be passed as a scalar ref
+      # to dbic. ideally this would substitute deeply
+      $source->{cond} = { 
+        map { 
+          $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_} 
+                                                   : $source->{cond}->{$_} 
+        } keys %{$source->{cond}} 
+      };
     }
 
-    $rs = $rs->search($source->{cond}, { join => $source->{join} }) if ($source->{cond});
+    $rs = $rs->search($source->{cond}, { join => $source->{join} }) 
+      if $source->{cond};
+
     $self->msg("- dumping $source->{class}");
+
     my %source_options = ( set => { %{$config}, %{$source} } );
     if ($source->{quantity}) {
-      $rs = $rs->search({}, { order_by => $source->{order_by} }) if ($source->{order_by});
+      $rs = $rs->search({}, { order_by => $source->{order_by} }) 
+        if $source->{order_by};
+
       if ($source->{quantity} =~ /^\d+$/) {
         $rs = $rs->search({}, { rows => $source->{quantity} });
       } elsif ($source->{quantity} ne 'all') {
-        DBIx::Class::Exception->throw('invalid value for quantity - ' . $source->{quantity});
+        DBIx::Class::Exception->throw("invalid value for quantity - $source->{quantity}");
       }
     }
     elsif ($source->{ids} && @{$source->{ids}}) {
@@ -665,7 +674,9 @@ sub dump_object {
   $source_dir->mkpath(0, 0777);
 
   # strip dir separators from file name
-  my $file = $source_dir->file(join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix');
+  my $file = $source_dir->file(
+      join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix'
+  );
 
 
   # write file
@@ -704,9 +715,13 @@ sub dump_object {
   }
 
   # don't bother looking at rels unless we are actually planning to dump at least one type
-  return unless $set->{might_have}->{fetch} 
-             || $set->{belongs_to}->{fetch} 
-             || $set->{has_many}->{fetch} 
+  my ($might_have, $belongs_to, $has_many) = map {
+    $set->{$_}{fetch};
+  } qw/might_have belongs_to has_many/;
+
+  return unless $might_have
+             || $belongs_to
+             || $has_many
              || $set->{fetch};
 
   # dump rels of object
@@ -714,32 +729,54 @@ sub dump_object {
     foreach my $name (sort $src->relationships) {
       my $info = $src->relationship_info($name);
       my $r_source = $src->related_source($name);
-      # if belongs_to or might_have with might_have param set or has_many with has_many param set then
+      # if belongs_to or might_have with might_have param set or has_many with
+      # has_many param set then
       if (
-            (   $info->{attrs}{accessor} eq 'single' && 
-                (!$info->{attrs}{join_type} || ($set->{might_have} && $set->{might_have}->{fetch}))
-            ) || 
-            $info->{attrs}{accessor} eq 'filter' || 
-            ($info->{attrs}{accessor} eq 'multi' && ($set->{has_many} && $set->{has_many}->{fetch}))
+            ( $info->{attrs}{accessor} eq 'single' && 
+              (!$info->{attrs}{join_type} || $might_have) 
+            )
+         || $info->{attrs}{accessor} eq 'filter' 
+         || 
+            ($info->{attrs}{accessor} eq 'multi' && $has_many)
       ) {
         my $related_rs = $object->related_resultset($name);	  
         my $rule = $set->{rules}->{$related_rs->result_source->source_name};
         # these parts of the rule only apply to has_many rels
         if ($rule && $info->{attrs}{accessor} eq 'multi') {		  
-          $related_rs = $related_rs->search($rule->{cond}, { join => $rule->{join} }) if ($rule->{cond});
-          $related_rs = $related_rs->search({}, { rows => $rule->{quantity} }) if ($rule->{quantity} && $rule->{quantity} ne 'all');
-          $related_rs = $related_rs->search({}, { order_by => $rule->{order_by} }) if ($rule->{order_by});		  
+          $related_rs = $related_rs->search(
+            $rule->{cond}, 
+            { join => $rule->{join} }
+          ) if ($rule->{cond});
+
+          $related_rs = $related_rs->search(
+            {},
+            { rows => $rule->{quantity} }
+          ) if ($rule->{quantity} && $rule->{quantity} ne 'all');
+
+          $related_rs = $related_rs->search(
+            {}, 
+            { order_by => $rule->{order_by} }
+          ) if ($rule->{order_by});		  
+
         }
-        if ($set->{has_many}->{quantity} && $set->{has_many}->{quantity} =~ /^\d+$/) {
-          $related_rs = $related_rs->search({}, { rows => $set->{has_many}->{quantity} });
+        if ($set->{has_many}{quantity} && 
+            $set->{has_many}{quantity} =~ /^\d+$/) {
+          $related_rs = $related_rs->search(
+            {}, 
+            { rows => $set->{has_many}->{quantity} }
+          );
         }
+
         my %c_params = %{$params};
         # inherit date param
-        my %mock_set = map { $_ => $set->{$_} } grep { $set->{$_} } @inherited_attrs;
+        my %mock_set = map { 
+          $_ => $set->{$_} 
+        } grep { $set->{$_} } @inherited_attrs;
+
         $c_params{set} = \%mock_set;
-        #		use Data::Dumper; print ' -- ' . Dumper($c_params{set}, $rule->{fetch}) if ($rule && $rule->{fetch});
-        $c_params{set} = merge( $c_params{set}, $rule) if ($rule && $rule->{fetch});
-        #		use Data::Dumper; print ' -- ' . Dumper(\%c_params) if ($rule && $rule->{fetch});
+        $c_params{set} = merge( $c_params{set}, $rule)
+          if $rule && $rule->{fetch};
+
         $self->dump_rs($related_rs, \%c_params);
       }	
     }
@@ -748,7 +785,8 @@ sub dump_object {
   return unless $set && $set->{fetch};
   foreach my $fetch (@{$set->{fetch}}) {
     # inherit date param
-    $fetch->{$_} = $set->{$_} foreach grep { !$fetch->{$_} && $set->{$_} } @inherited_attrs;
+    $fetch->{$_} = $set->{$_} foreach 
+      grep { !$fetch->{$_} && $set->{$_} } @inherited_attrs;
     my $related_rs = $object->related_resultset($fetch->{rel});
     my $rule = $set->{rules}->{$related_rs->result_source->source_name};
 
@@ -761,24 +799,31 @@ sub dump_object {
       }
     } 
 
-    die "relationship " . $fetch->{rel} . " does not exist for " . $src->source_name 
+    die "relationship $fetch->{rel} does not exist for " . $src->source_name 
       unless ($related_rs);
 
     if ($fetch->{cond} and ref $fetch->{cond} eq 'HASH') {
-      # if value starts with \ assume it's meant to be passed as a scalar ref to dbic
-      # ideally this would substitute deeply
+      # if value starts with \ assume it's meant to be passed as a scalar ref
+      # to dbic.  ideally this would substitute deeply
       $fetch->{cond} = { map { 
           $_ => ($fetch->{cond}->{$_} =~ s/^\\//) ? \$fetch->{cond}->{$_} 
                                                   : $fetch->{cond}->{$_} 
       } keys %{$fetch->{cond}} };
     }
 
-    $related_rs = $related_rs->search($fetch->{cond}, { join => $fetch->{join} }) 
-      if ($fetch->{cond});
-    $related_rs = $related_rs->search({}, { rows => $fetch->{quantity} })
-      if ($fetch->{quantity} && $fetch->{quantity} ne 'all');
-    $related_rs = $related_rs->search({}, { order_by => $fetch->{order_by} })
-      if ($fetch->{order_by});
+    $related_rs = $related_rs->search(
+      $fetch->{cond}, 
+      { join => $fetch->{join} }
+    ) if $fetch->{cond};
+
+    $related_rs = $related_rs->search(
+      {},
+      { rows => $fetch->{quantity} }
+    ) if $fetch->{quantity} && $fetch->{quantity} ne 'all';
+    $related_rs = $related_rs->search(
+      {}, 
+      { order_by => $fetch->{order_by} }
+    ) if $fetch->{order_by};
 
     $self->dump_rs($related_rs, { %{$params}, set => $fetch });
   }
@@ -789,7 +834,6 @@ sub _generate_schema {
   my $params = shift || {};
   require DBI;
   $self->msg("\ncreating schema");
-  #   die 'must pass version param to generate_schema_from_ddl' unless $params->{version};
 
   my $schema_class = $self->schema_class || "DBIx::Class::Fixtures::Schema";
   eval "require $schema_class";
@@ -833,7 +877,7 @@ sub _generate_schema {
 
   # load schema object from our new DB
   $namespace_counter++;
-  my $namespace2 = "DBIx::Class::Fixtures::GeneratedSchema_" . $namespace_counter;
+  my $namespace2 = "DBIx::Class::Fixtures::GeneratedSchema_$namespace_counter";
   Class::C3::Componentised->inject_base( $namespace2 => $schema_class );
   my $schema = $namespace2->connect(@{$connection_details});
   return $schema;
@@ -918,19 +962,15 @@ C<no_deploy> attribute.
 sub populate {
   my $self = shift;
   my ($params) = @_;
-  unless (ref $params eq 'HASH') {
-    return DBIx::Class::Exception->throw('first arg to populate must be hash ref');
-  }
+  DBIx::Class::Exception->throw('first arg to populate must be hash ref')
+    unless ref $params eq 'HASH';
 
-  foreach my $param (qw/directory/) {
-    unless ($params->{$param}) {
-      return DBIx::Class::Exception->throw($param . ' param not specified');
-    }
-  }
+  DBIx::Class::Exception->throw('directory param not specified')
+    unless $params->{directory};
+
   my $fixture_dir = dir(delete $params->{directory});
-  unless (-e $fixture_dir) {
-    return DBIx::Class::Exception->throw('fixture directory does not exist at ' . $fixture_dir);
-  }
+  DBIx::Class::Exception->throw("fixture directory '$fixture_dir' does not exist")
+    unless -d $fixture_dir;
 
   my $ddl_file;
   my $dbh;
@@ -951,7 +991,7 @@ sub populate {
   } elsif ($params->{schema} && $params->{no_deploy}) {
     $schema = $params->{schema};
   } else {
-    return DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
+    DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
   }
 
 
@@ -961,26 +1001,26 @@ sub populate {
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
 
   my $version_file = file($fixture_dir, '_dumper_version');
-  unless (-e $version_file) {
-#     return DBIx::Class::Exception->throw('no version file found');
-  }
+#  DBIx::Class::Exception->throw('no version file found');
+#    unless -e $version_file;
 
   if (-e $tmp_fixture_dir) {
     $self->msg("- deleting existing temp directory $tmp_fixture_dir");
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
-  dircopy(
-      dir($fixture_dir, $schema->source($_)->from), 
-      dir($tmp_fixture_dir, $schema->source($_)->from)
-    ) for grep { -e dir($fixture_dir, $schema->source($_)->from) } $schema->sources;
+  for ( map { $schema->source($_)->from } $schema->sources) {
+    my $from_dir = $fixture_dir->subdir($_);
+    next unless -e $from_dir;
+    dircopy($from_dir, $tmp_fixture_dir->subdir($_) );
+  }
 
   unless (-d $tmp_fixture_dir) {
-    return DBIx::Class::Exception->throw("Unable to create temporary fixtures dir: $tmp_fixture_dir: $!");
+    DBIx::Class::Exception->throw("Unable to create temporary fixtures dir: $tmp_fixture_dir: $!");
   }
 
   my $fixup_visitor;
-  my $formatter= $schema->storage->datetime_parser;
+  my $formatter = $schema->storage->datetime_parser;
   unless ($@ || !$formatter) {
     my %callbacks;
     if ($params->{datetime_relative_to}) {
@@ -1000,7 +1040,7 @@ sub populate {
     foreach my $source (sort $schema->sources) {
       $self->msg("- adding " . $source);
       my $rs = $schema->resultset($source);
-      my $source_dir = dir($tmp_fixture_dir, lc($rs->result_source->from));
+      my $source_dir = $tmp_fixture_dir->subdir( lc $rs->result_source->from );
       next unless (-e $source_dir);
       my @rows;
       while (my $file = $source_dir->next) {
@@ -1012,7 +1052,7 @@ sub populate {
         $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
         push(@rows, $HASH1);
       }
-      $rs->populate(\@rows) if (scalar(@rows));
+      $rs->populate(\@rows) if scalar(@rows);
     }
   });
 
