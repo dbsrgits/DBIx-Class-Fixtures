@@ -999,7 +999,6 @@ sub populate {
   
   $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
-
   my $version_file = file($fixture_dir, '_dumper_version');
 #  DBIx::Class::Exception->throw('no version file found');
 #    unless -e $version_file;
@@ -1009,6 +1008,7 @@ sub populate {
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
+  $tmp_fixture_dir->mkpath();
   for ( map { $schema->source($_)->from } $schema->sources) {
     my $from_dir = $fixture_dir->subdir($_);
     next unless -e $from_dir;
