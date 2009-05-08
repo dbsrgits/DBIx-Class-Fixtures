@@ -1,12 +1,12 @@
 {
-        might_have: {
-            fetch: 0
+        "might_have": {
+            "fetch": 0
         },
-        has_many: {
-            fetch: 0
+        "has_many": {
+            "fetch": 0
         },
-        sets: [{
-            class: 'Artist',
-            quantity: 1
+        "sets": [{
+            "class": "Artist",
+            "quantity": 1
         }]
 }

@@ -1,23 +1,23 @@
 {
-        might_have: {
-            fetch: 0
+        "might_have": {
+            "fetch": 0
         },
-        has_many: {
-            fetch: 0
+        "has_many": {
+            "fetch": 0
         },
-        sets: [{
-            class: 'Artist',
-            ids: ['1'],
-            fetch: [{
-                rel: cds,
-                quantity: all
+        "sets": [{
+            "class": "Artist",
+            "ids": ["1"],
+            "fetch": [{
+                "rel": "cds",
+                "quantity": "all"
             }]
         }, {
-            class: 'Artist',
-            ids: ['2'],
-            fetch: [{
-                rel: cds,
-                cond: { year: {'>': 2002} }
+            "class": "Artist",
+            "ids": ["2"],
+            "fetch": [{
+                "rel": "cds",
+                "cond": { "year": {">": 2002} }
             }]
         }]
 }
