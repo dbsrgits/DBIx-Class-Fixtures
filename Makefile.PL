@@ -4,12 +4,12 @@ perl_version '5.006001';
 name     'DBIx-Class-Fixtures';
 all_from 'lib/DBIx/Class/Fixtures.pm';
 
-requires 'DBIx::Class' => 0.08099_07;
+requires 'DBIx::Class' => 0.08102;
 requires 'Data::Visitor' => 0.15;
 requires 'File::Copy::Recursive' => 0.35;
 requires 'DateTime' => 0.41;
 requires 'DateTime::Format::MySQL' => 0.04;
-requires 'DBIx::Class::Schema::Loader' => 0.04004;
+requires 'DBIx::Class::Schema::Loader' => 0.04006;
 requires 'Class::Accessor::Grouped' => 0.06;
 requires 'Path::Class' => 0.16;
 requires 'Config::Any' => 0.08;
