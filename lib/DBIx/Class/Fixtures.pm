@@ -3,7 +3,7 @@ package DBIx::Class::Fixtures;
 use strict;
 use warnings;
 
-use DBIx::Class 0.08099_07;
+use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
 use Path::Class qw(dir file);
