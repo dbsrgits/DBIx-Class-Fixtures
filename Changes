@@ -1,6 +1,7 @@
 Revision history for DBIx-Class-Fixtures
 
 - Fix t/var/configs/*.json to use valid JSON syntax
+- Fixed DateTime::Format dependencies
 
 1.001002
 - Allow passing schema object to ->populate
