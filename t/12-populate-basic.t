@@ -1,7 +1,7 @@
 #!perl
 
 use DBIx::Class::Fixtures;
-use Test::More tests => 38;
+use Test::More no_plan;
 use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
