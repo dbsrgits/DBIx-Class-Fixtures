@@ -26,11 +26,11 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
 
 =head1 VERSION
 
-Version 1.001000
+Version 1.001004
 
 =cut
 
-our $VERSION = '1.001003';
+our $VERSION = '1.001004';
 
 =head1 NAME
 

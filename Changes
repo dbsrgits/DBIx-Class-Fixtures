@@ -1,5 +1,10 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001004
+- Fixed problem where descending a has_many to something with two belongs_to
+  relationships wouldn't get the second belongs_to.
+
+1.001003
 - Fix t/var/configs/*.json to use valid JSON syntax
 - Fixed DateTime::Format dependencies
 
