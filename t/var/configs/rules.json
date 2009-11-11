@@ -17,6 +17,9 @@
             }]
         }],
         "rules": {
+            "might_have": {
+                "fetch": 0
+            },
             "CD": {
                 "cond": [{ "tags.tag": "Cheesy" }],
                 "join": ["tags"],

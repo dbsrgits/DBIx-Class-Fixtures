@@ -1,5 +1,15 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001008
+- Man, I should test better.
+
+1.001007
+- Should use Schema->source(), not ->resultset().
+
+1.001006
+- Schema->resultset() throws an exception, not return undef, when it can't find
+  a moniker.
+
 1.001005
 - Fixed problem where rules containing an override of has_many weren't applied
   correctly.
