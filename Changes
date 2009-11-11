@@ -1,5 +1,9 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001005
+- Fixed problem where rules containing an override of has_many weren't applied
+  correctly.
+
 1.001004
 - Fixed problem where descending a has_many to something with two belongs_to
   relationships wouldn't get the second belongs_to.

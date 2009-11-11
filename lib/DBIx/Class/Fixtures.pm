@@ -26,7 +26,7 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
 
 =head1 VERSION
 
-Version 1.001004
+Version 1.001005
 
 =cut
 
@@ -524,6 +524,12 @@ sub dump {
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
 
+  while ( my ($k,$v) = each %{ $config->{rules} } ) {
+    if ( my $rs = $schema->resultset($k) ) {
+      $config->{rules}{$rs->result_source->source_name} = $v;
+    }
+  }
+
   foreach my $source (@sources) {
     # apply rule to set if specified
     my $rule = $config->{rules}->{$source->{class}};
@@ -716,7 +722,7 @@ sub dump_object {
 
   # don't bother looking at rels unless we are actually planning to dump at least one type
   my ($might_have, $belongs_to, $has_many) = map {
-    $set->{$_}{fetch};
+    $set->{$_}{fetch} || $set->{rules}{$src->source_name}{$_}{fetch}
   } qw/might_have belongs_to has_many/;
 
   return unless $might_have
