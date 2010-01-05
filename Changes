@@ -1,5 +1,7 @@
 Revision history for DBIx-Class-Fixtures
 
+- Force operations to work inside a transaction so with_deferred_fks actually works.
+
 1.001008
 - Man, I should test better.
 

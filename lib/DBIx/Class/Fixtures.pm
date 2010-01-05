@@ -863,12 +863,14 @@ sub _generate_schema {
 
   # clear existing db
   $self->msg("- clearing DB of existing tables");
-  $pre_schema->storage->with_deferred_fk_checks(sub {
-    foreach my $table (@tables) {
-      eval { 
-        $dbh->do("drop table $table" . ($params->{cascade} ? ' cascade' : '') ) 
-      };
-    }
+  $pre_schema->storage->txn_do(sub {
+    $pre_schema->storage->with_deferred_fk_checks(sub {
+      foreach my $table (@tables) {
+        eval { 
+          $dbh->do("drop table $table" . ($params->{cascade} ? ' cascade' : '') ) 
+        };
+      }
+    });
   });
 
   # import new ddl file to db
@@ -1042,26 +1044,27 @@ sub populate {
     $fixup_visitor = new Data::Visitor::Callback(%callbacks);
   }
 
-  $schema->storage->with_deferred_fk_checks(sub {
-    foreach my $source (sort $schema->sources) {
-      $self->msg("- adding " . $source);
-      my $rs = $schema->resultset($source);
-      my $source_dir = $tmp_fixture_dir->subdir( lc $rs->result_source->from );
-      next unless (-e $source_dir);
-      my @rows;
-      while (my $file = $source_dir->next) {
-        next unless ($file =~ /\.fix$/);
-        next if $file->is_dir;
-        my $contents = $file->slurp;
-        my $HASH1;
-        eval($contents);
-        $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
-        push(@rows, $HASH1);
+  $schema->storage->txn_do(sub {
+    $schema->storage->with_deferred_fk_checks(sub {
+      foreach my $source (sort $schema->sources) {
+        $self->msg("- adding " . $source);
+        my $rs = $schema->resultset($source);
+        my $source_dir = $tmp_fixture_dir->subdir( lc $rs->result_source->from );
+        next unless (-e $source_dir);
+        my @rows;
+        while (my $file = $source_dir->next) {
+          next unless ($file =~ /\.fix$/);
+          next if $file->is_dir;
+          my $contents = $file->slurp;
+          my $HASH1;
+          eval($contents);
+          $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
+          push(@rows, $HASH1);
+        }
+        $rs->populate(\@rows) if scalar(@rows);
       }
-      $rs->populate(\@rows) if scalar(@rows);
-    }
+    });
   });
-
   $self->do_post_ddl( {
     schema=>$schema, 
     post_ddl=>$params->{post_ddl}
