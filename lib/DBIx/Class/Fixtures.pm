@@ -76,18 +76,18 @@ describe which data to pull and dump from the source database.
 For example:
 
  {
-   sets: [
+   "sets": [
      {
-       class: 'Artist',
-       ids: ['1', '3']
+       "class": "Artist",
+       "ids": ["1", "3"]
      },
      {
-       class: 'Producer',
-       ids: ['5'],
-       fetch: [
+       "class": "Producer",
+       "ids": ["5"],
+       "fetch": [
          {
-           rel: 'artists',
-           quantity: '2'
+           "rel": "artists",
+           "quantity": "2"
          }
        ]
      }
@@ -113,27 +113,27 @@ was dumped you also wanted all of their cds dumped too, then you could use a
 rule to specify this. For example:
 
  {
-   sets: [
+   "sets": [
      {
-       class: 'Artist',
-       ids: ['1', '3']
+       "class": "Artist",
+       "ids": ["1", "3"]
      }, 
      {
-       class: 'Producer',
-       ids: ['5'],
-       fetch: [
+       "class": "Producer",
+       "ids": ["5"],
+       "fetch": [
          { 
-           rel: 'artists',
-           quantity: '2'
+           "rel": "artists",
+           "quantity": "2"
          }
        ]
      }
    ],
-   rules: {
-     Artist: {
-       fetch: [ {
-         rel: 'cds',
-         quantity: 'all'
+   "rules": {
+     "Artist": {
+       "fetch": [ {
+         "rel": "cds",
+         "quantity": "all"
        } ]
      }
    }
@@ -144,24 +144,24 @@ dumped as well. Note that 'cds' is a has_many DBIx::Class relation from Artist
 to CD. This is eqivalent to:
 
  {
-   sets: [
+   "sets": [
     {
-       class: 'Artist',
-       ids: ['1', '3'],
-       fetch: [ {
-         rel: 'cds',
-         quantity: 'all'
+       "class": "Artist",
+       "ids": ["1", "3"],
+       "fetch": [ {
+         "rel": "cds",
+         "quantity": "all"
        } ]
      }, 
      {
-       class: 'Producer',
-       ids: ['5'],
-       fetch: [ { 
-         rel: 'artists',
-         quantity: '2',
-         fetch: [ {
-           rel: 'cds',
-           quantity: 'all'
+       "class": "Producer",
+       "ids": ["5"],
+       "fetch": [ { 
+         "rel": "artists",
+         "quantity": "2",
+         "fetch": [ {
+           "rel": "cds",
+           "quantity": "all"
          } ]
        } ]
      }
@@ -178,12 +178,12 @@ To prevent repetition between configs you can include other configs. For
 example:
 
  {
-   sets: [ {
-     class: 'Producer',
-     ids: ['5']
+   "sets": [ {
+     "class": "Producer",
+     "ids": ["5"]
    } ],
-   includes: [
-     { file: 'base.json' }
+   "includes": [
+     { "file": "base.json" }
    ]
  }
 
@@ -197,11 +197,11 @@ Only available for MySQL and PostgreSQL at the moment, must be a value that
 DateTime::Format::* can parse. For example:
 
  {
-   sets: [ {
-     class: 'RecentItems',
-     ids: ['9']
+   "sets": [ {
+     "class": "RecentItems",
+     "ids": ["9"]
    } ],
-   datetime_relative : "2007-10-30 00:00:00"
+   "datetime_relative": "2007-10-30 00:00:00"
  }
 
 This will work when dumping from a MySQL database and will cause any datetime
@@ -217,15 +217,15 @@ Specifies whether to automatically dump might_have relationships. Should be a
 hash with one attribute - fetch. Set fetch to 1 or 0.
 
  {
-   might_have: { fetch: 1 },
-   sets: [
+   "might_have": { "fetch": 1 },
+   "sets": [
      {
-       class: 'Artist',
-       ids: ['1', '3']
+       "class": "Artist",
+       "ids": ["1", "3"]
      },
      {
-       class: 'Producer',
-       ids: ['5']
+       "class": "Producer",
+       "ids": ["5"]
      }
    ]
  }
@@ -260,10 +260,10 @@ A hash specifying the conditions dumped objects must match. Essentially this is
 a JSON representation of a DBIx::Class search clause. For example:
 
  {
-   sets: [{
-     class: 'Artist',
-     quantiy: 'all',
-     cond: { name: 'Dave' }
+   "sets": [{
+     "class": "Artist",
+     "quantiy": "all",
+     "cond": { "name": "Dave" }
    }]
  }
 
@@ -277,10 +277,10 @@ Sometimes in a search clause it's useful to use scalar refs to do things like:
 This could be specified in the cond hash like so:
 
  {
-   sets: [ {
-     class: 'Artist',
-     quantiy: 'all',
-     cond: { no1_singles: '\> no1_albums' }
+   "sets": [ {
+     "class": "Artist",
+     "quantiy": "all",
+     "cond": { "no1_singles": "\> no1_albums" }
    } ]
  }
 
@@ -292,11 +292,11 @@ being passed to search.
 An array of relationships to be used in the cond clause.
 
  {
-   sets: [ {
-     class: 'Artist',
-     quantiy: 'all',
-     cond: { 'cds.position': { '>': 4 } },
-     join: ['cds']
+   "sets": [ {
+     "class": "Artist",
+     "quantiy": "all",
+     "cond": { "cds.position": { ">": 4 } },
+     "join": ["cds"]
    } ]
  }
 
@@ -307,13 +307,13 @@ Fetch all artists who have cds with position greater than 4.
 Must be an array of hashes. Specifies which rels to also dump. For example:
 
  {
-   sets: [ {
-     class: 'Artist',
-     ids: ['1', '3'],
-     fetch: [ {
-       rel: 'cds',
-       quantity: '3',
-       cond: { position: '2' }
+   "sets": [ {
+     "class": "Artist",
+     "ids": ["1", "3"],
+     "fetch": [ {
+       "rel": "cds",
+       "quantity": "3",
+       "cond": { "position": "2" }
      } ]
    } ]
  }
@@ -1113,6 +1113,8 @@ sub msg {
   Matt S. Trout <mst@shadowcatsystems.co.uk>
 
   Drew Taylor <taylor.andrew.j@gmail.com>
+
+  Frank Switalski <fswitalski@gmail.com>
 
 =head1 LICENSE
 
