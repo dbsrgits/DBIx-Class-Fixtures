@@ -34,7 +34,7 @@ foreach my $set ('simple', 'quantity', 'fetch', 'rules') {
     directory => 't/var/fixtures'
   });
 
-  $schema = DBICTest->init_schema(no_deploy => 1);
+  $schema = DBICTest->init_schema( no_deploy => 1);
 
   my $fixture_dir = dir('t/var/fixtures');
   foreach my $class ($schema->sources) {
@@ -58,3 +58,26 @@ foreach my $set ('simple', 'quantity', 'fetch', 'rules') {
     }
   }
 }
+
+# use_create => 1
+$schema = DBICTest->init_schema();
+$fixtures = DBIx::Class::Fixtures->new({
+	config_dir => $config_dir,
+	debug => 0
+});
+ok( $fixtures->dump({
+		config => "use_create.json",
+		schema => $schema,
+		directory => 't/var/fixtures'
+	}), "use_create dump executed okay"
+);
+$schema = DBICTest->init_schema( no_populate => 1 );
+$fixtures->populate({
+	directory => 't/var/fixtures',
+	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''], 
+	schema => $schema,
+	no_deploy => 1,
+	use_create => 1
+});
+$schema = DBICTest->init_schema( no_deploy => 1, no_populate => 1 );
+is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "use_create => 1 ok" );

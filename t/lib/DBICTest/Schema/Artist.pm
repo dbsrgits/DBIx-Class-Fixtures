@@ -22,4 +22,12 @@ __PACKAGE__->has_many(
     { order_by => 'year' },
 );
 
+sub new {
+	my ( $class, $args ) = @_;
+
+	$args->{name} = "Test Name" unless $args->{name};
+
+	return $class->next::method( $args );
+}
+
 1;

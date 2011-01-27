@@ -425,7 +425,8 @@ sub new {
               _inherited_attributes => [qw/datetime_relative might_have rules belongs_to/],
               debug => $params->{debug} || 0,
               ignore_sql_errors => $params->{ignore_sql_errors},
-              dumped_objects => {}
+              dumped_objects => {},
+              use_create => $params->{use_create} || 0
   };
 
   bless $self, $class;
@@ -932,6 +933,11 @@ sub _read_sql {
    # optional, set to 1 to run ddl but not populate 
    no_populate => 0,
 
+	# optional, set to 1 to run each fixture through ->create rather than have
+   # each $rs populated using $rs->populate. Useful if you have overridden new() logic
+	# that effects the value of column(s).
+	use_create => 0,
+
    # Dont try to clean the database, just populate over whats there. Requires
    # schema option. Use this if you want to handle removing old data yourself
    # no_deploy => 1
@@ -1059,7 +1065,11 @@ sub populate {
           my $HASH1;
           eval($contents);
           $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
-          push(@rows, $HASH1);
+          if ( $params->{use_create} ) {
+            $rs->create( $HASH1 );
+          } else {
+            push(@rows, $HASH1);
+          }
         }
         $rs->populate(\@rows) if scalar(@rows);
       }
