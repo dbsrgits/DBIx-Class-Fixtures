@@ -484,6 +484,10 @@ sub dump {
     }
   }
 
+  if($params->{excludes} && !$params->{all}) {
+    return DBIx::Class::Exception->throw("'excludes' param only works when using the 'all' param");
+  }
+
   my $schema = $params->{schema};
   my $config;
   if ($params->{config}) {
@@ -491,11 +495,17 @@ sub dump {
     my $config_file = $self->config_dir->file($params->{config});
     $config = $self->load_config_file($config_file);
   } elsif ($params->{all}) {
+    my %excludes = map {$_=>1} @{$params->{excludes}||[]};
     $config = { 
       might_have => { fetch => 0 },
       has_many => { fetch => 0 },
       belongs_to => { fetch => 0 },
-      sets => [map {{ class => $_, quantity => 'all' }} $schema->sources] 
+      sets => [
+        map {
+          { class => $_, quantity => 'all' };
+        } grep {
+          !$excludes{$_}
+        } $schema->sources],
     };
   } else {
     DBIx::Class::Exception->throw('must pass config or set all');
