@@ -466,7 +466,12 @@ directory. For example:
  /home/me/app/fixtures/artist/3.fix
  /home/me/app/fixtures/producer/5.fix
 
-schema and directory are required attributes. also, one of config or all must be specified.
+schema and directory are required attributes. also, one of config or all must
+be specified.
+
+Lastly, the C<config> parameter can be a Perl HashRef instead of a file name.
+If this form is used your HashRef should conform to the structure rules defined
+for the JSON representations.
 
 =cut
 
@@ -491,9 +496,13 @@ sub dump {
   my $schema = $params->{schema};
   my $config;
   if ($params->{config}) {
-    #read config
-    my $config_file = $self->config_dir->file($params->{config});
-    $config = $self->load_config_file($config_file);
+    my $config = ref $params->{config} eq 'HASH' ? 
+      $params->{config} : 
+      do {
+        #read config
+        my $config_file = $self->config_dir->file($params->{config});
+        $self->load_config_file($config_file);
+      };
   } elsif ($params->{all}) {
     my %excludes = map {$_=>1} @{$params->{excludes}||[]};
     $config = { 
