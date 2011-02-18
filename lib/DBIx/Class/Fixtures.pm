@@ -496,7 +496,7 @@ sub dump {
   my $schema = $params->{schema};
   my $config;
   if ($params->{config}) {
-    my $config = ref $params->{config} eq 'HASH' ? 
+    $config = ref $params->{config} eq 'HASH' ? 
       $params->{config} : 
       do {
         #read config
