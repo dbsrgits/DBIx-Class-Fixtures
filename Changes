@@ -1,5 +1,11 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001011
+- Added an excludes resultsource option to the ->dump({all=>1,...}) feature
+- Allow you to directly set a configuration via a Perl HashRef instead of a
+  JSON file.  Useful for testing and when you have simple or generated configs.
+- New option to force use of ->create rather than ->populate.
+
 1.001010
 - Fixed docs to use double quotes which is valid JSON
 
