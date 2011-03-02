@@ -15,6 +15,7 @@ requires 'Config::Any' => 0.08;
 requires 'JSON::Syck' => 0.26;
 requires 'Data::Dump::Streamer' => 2.05;
 requires 'Hash::Merge' => 0.10;
+requires 'Scalar::Util';
 
 requires 'DateTime::Format::SQLite' => 0.10;
 requires 'DateTime::Format::MySQL' => 0;
