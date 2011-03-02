@@ -968,7 +968,6 @@ sub dump_config_sets {
     DBIx::Class::Exception->throw("'directory_template is required parameter");
 
   for my $set (@$available_config_sets) {
-      warn "doing $set";
     my $localparams = $params;
     $localparams->{directory} = $directory_template->($self, $localparams, $set);
     $localparams->{config} = $set;
