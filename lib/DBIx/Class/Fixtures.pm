@@ -26,11 +26,11 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
 
 =head1 VERSION
 
-Version 1.001012
+Version 1.001013
 
 =cut
 
-our $VERSION = '1.001012';
+our $VERSION = '1.001013';
 
 =head1 NAME
 
@@ -972,10 +972,18 @@ sub dump_config_sets {
     $localparams->{directory} = $directory_template->($self, $localparams, $set);
     $localparams->{config} = $set;
     $self->dump($localparams);
+    $self->dumped_objects({}); ## Clear dumped for next go, if there is one!
   }
 }
 
 =head2 dump_all_config_sets
+
+    my %local_params = %$params;
+    my $local_self = bless { %$self }, ref($self);
+    $local_params{directory} = $directory_template->($self, \%local_params, $set);
+    $local_params{config} = $set;
+    $self->dump(\%local_params);
+
 
 Works just like L</dump> but instead of specifying a single json config set
 located in L</config_dir> we dump each set in turn to the specified directory.
