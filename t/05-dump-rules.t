@@ -1,7 +1,7 @@
 #!perl
 
 use DBIx::Class::Fixtures;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
@@ -48,3 +48,5 @@ foreach my $cd_fix_file ($cd_dir->children) {
     }
   }
 }
+
+ok $fixtures->available_config_sets, 'Found sets';

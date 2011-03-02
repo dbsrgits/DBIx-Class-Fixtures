@@ -17,3 +17,4 @@ eval {
 ok($@, 'new errors with non-existent config dir');
 
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir }), 'object created with correct config dir');
+

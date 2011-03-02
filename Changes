@@ -1,5 +1,12 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001012
+- Added new method 'available_config_sets' which returns and caches a list of
+  all the json set configs found in the 'config_dir' directory.  This was added
+  to make it easier when you need to dump all the fixtures programatically.
+- Added method 'dump_all_config_sets' which helps automate dumping all your 
+  current config sets to a directory.  
+
 1.001011
 - Added an excludes resultsource option to the ->dump({all=>1,...}) feature
 - Allow you to directly set a configuration via a Perl HashRef instead of a
