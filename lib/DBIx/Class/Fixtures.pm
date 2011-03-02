@@ -26,15 +26,15 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
 
 =head1 VERSION
 
-Version 1.001011
+Version 1.001012
 
 =cut
 
-our $VERSION = '1.001011';
+our $VERSION = '1.001012';
 
 =head1 NAME
 
-DBIx::Class::Fixtures
+DBIx::Class::Fixtures - Dump data and repopulate a database using rules
 
 =head1 SYNOPSIS
 
@@ -432,6 +432,22 @@ sub new {
   bless $self, $class;
 
   return $self;
+}
+
+=head2 available_config_sets
+
+Returns a list of all the config sets found in the L</config_dir>.  These will
+be a list of the json based files containing dump rules.
+
+=cut
+
+my @config_sets;
+sub available_config_sets {
+  @config_sets = scalar(@config_sets) ? @config_sets : map {
+    $_->basename;
+  } grep { 
+    -f $_ && $_=~/json$/;
+  } dir((shift)->config_dir)->children;
 }
 
 =head2 dump
@@ -921,6 +937,40 @@ sub _read_sql {
   close($fh);
   @data = grep { $_ && $_ !~ /^-- / } @data;
   return \@data;
+}
+
+=head2 dump_all_config_sets
+
+Works just like L</dump> but instead of specifying a single json config set
+located in L</config_dir> we dump each set in turn to the specified directory.
+
+The parameters are the same as for L</dump> except instead of a C<directory>
+parameter we have a C<directory_template> which is a coderef expected to return
+a scalar that is a root directory where we will do the actual dumping.  This
+coderef get three arguments: C<$self>, C<$params> and C<$set_name>.  For
+example:
+
+    $fixture->dump_all_config_sets({
+      schema => $schema,
+      directory_template => sub {
+        my ($fixture, $params, $set) = @_;
+        return File::Spec->catdir('var', 'fixtures', $params->{schema}->version, $set);
+      },
+    });
+
+=cut
+
+sub dump_all_config_sets {
+  my ($self, $params) = @_;
+  my @available_config_sets = $self->available_config_sets;
+  my $directory_template = delete $params->{directory_template} ||
+    DBIx::Class::Exception->throw("'directory_template is required parameter");
+
+  for my $set (@available_config_sets) {
+    local($self,$params);
+    $params->{directory} = $directory_template->($self, $params, $set);
+    $self->dump($params)
+  }
 }
 
 =head2 populate
