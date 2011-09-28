@@ -712,7 +712,7 @@ sub dump_object {
 
 
   # write dir and gen filename
-  my $source_dir = $params->{set_dir}->subdir(lc $src->from);
+  my $source_dir = $params->{set_dir}->subdir($src->from);
   $source_dir->mkpath(0, 0777);
 
   # strip dir separators from file name
@@ -1163,7 +1163,7 @@ sub populate {
       foreach my $source (sort $schema->sources) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
-        my $source_dir = $tmp_fixture_dir->subdir( lc $rs->result_source->from );
+        my $source_dir = $tmp_fixture_dir->subdir( $rs->result_source->from );
         next unless (-e $source_dir);
         my @rows;
         while (my $file = $source_dir->next) {

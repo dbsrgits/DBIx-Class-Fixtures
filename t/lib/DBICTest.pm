@@ -200,6 +200,11 @@ sub populate_schema {
         [ 17, 1, 2, "Apiary"],
         [ 18, 1, 3, "Beehind You"],
     ]);
+
+	$schema->populate('MixedCase', [
+		[qw/ id name /],
+		[ 1, 'some name' ]
+	]);
 }
 
 1;

@@ -60,4 +60,12 @@ CREATE TABLE producer (
   name varchar(100) NOT NULL
 );
 
+--
+-- Table: MixedCase
+--
+CREATE TABLE MixedCase (
+  id INTEGER PRIMARY KEY NOT NULL,
+  name varchar(100) NOT NULL
+);
+
 COMMIT;

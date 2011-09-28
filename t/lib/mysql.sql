@@ -59,3 +59,12 @@ CREATE TABLE producer (
   producerid INTEGER PRIMARY KEY NOT NULL,
   name varchar(100) NOT NULL
 );
+
+--
+-- Table: MixedCase
+--
+DROP TABLE IF EXISTS MixedCase;
+CREATE TABLE MixedCase (
+  id INTEGER PRIMARY KEY NOT NULL,
+  name varchar(100) NOT NULL
+);
