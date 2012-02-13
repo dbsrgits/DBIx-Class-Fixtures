@@ -1,5 +1,11 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001014
+- Allow you to perform value substitutions inside config-sets
+- Added a framework to allow you to backup / restore data external to the
+  database as part of your fixtures.  Added an external handler for File
+  based data, and docs and tests for this.
+
 1.001013
 - fixed functionality in last release by more deeply cloning parameters, which
   prevents bad things when parameters get deleted in the wrong places.  Also 
