@@ -5,7 +5,7 @@
         "external": {
             "file": {
                 "class": "File",
-                "args": {"path":"./t/var/files"}
+                "args": {"path":"__ATTR(photo_dir)__"}
             }
         }
 	}]

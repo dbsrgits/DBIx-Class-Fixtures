@@ -7,6 +7,7 @@ use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
 use Path::Class qw(dir file);
+use File::Spec::Functions 'catfile', 'catdir';
 use Config::Any::JSON;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
@@ -16,13 +17,14 @@ use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 use Class::C3::Componentised;
+use MIME::Base64;
 
 use base qw(Class::Accessor::Grouped);
 
 our $namespace_counter = 0;
 
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
-    _inherited_attributes debug schema_class dumped_objects/);
+    _inherited_attributes debug schema_class dumped_objects config_attrs/);
 
 =head1 VERSION
 
@@ -30,7 +32,7 @@ Version 1.001013
 
 =cut
 
-our $VERSION = '1.001013';
+our $VERSION = '1.001014';
 
 =head1 NAME
 
@@ -343,6 +345,40 @@ in this case.
 This value will be inherited by all fetches in this set. This is not true for
 the has_many attribute.
 
+=head2 external
+
+In some cases your database information might be keys to values in some sort of
+external storage.  The classic example is you are using L<DBIx::Class::InflateColumn::FS>
+to store blob information on the filesystem.  In this case you may wish the ability
+to backup your external storage in the same way your database data.  The L</external>
+attribute lets you specify a handler for this type of issue.  For example:
+
+    {
+        "sets": [{
+            "class": "Photo",
+            "quantity": "all",
+            "external": {
+                "file": {
+                    "class": "File",
+                    "args": {"path":"__ATTR(photo_dir)__"}
+                }
+            }
+        }]
+    }
+
+This would use L<DBIx::Class::Fixtures::External::File> to read from a directory
+where the path to a file is specified by the C<file> field of the C<Photo> source.
+We use the uninflated value of the field so you need to completely handle backup
+and restore.  For the common case we provide  L<DBIx::Class::Fixtures::External::File>
+and you can create your own custom handlers by placing a '+' in the namespace:
+
+    "class": "+MyApp::Schema::SomeExternalStorage",
+
+Although if possible I'd love to get patches to add some of the other common
+types (I imagine storage in MogileFS, Redis, etc or even Amazon might be popular.)
+
+See L<DBIx::Class::Fixtures::External::File> for the external handler interface.
+
 =head1 RULE ATTRIBUTES
 
 =head2 cond
@@ -364,6 +400,34 @@ Same as with L</SET ATTRIBUTES>
 =head2 might_have
 
 Same as with L</SET ATTRIBUTES>
+
+=head1 RULE SUBSTITUTIONS
+
+You can provide the following substitution patterns for your rule values. An
+example of this might be:
+
+    {
+        "sets": [{
+            "class": "Photo",
+            "quantity": "__ENV(NUMBER_PHOTOS_DUMPED)__",
+        }]
+    }
+
+=head2 ENV
+
+Provide a value from %ENV
+
+=head2 ATTR
+
+Provide a value from L</config_attrs>
+
+=head2 catfile
+
+Create the path to a file from a list
+
+=heade catdir
+
+Create the path to a directory from a list
 
 =head1 METHODS
 
@@ -394,6 +458,32 @@ determines whether to be verbose
 =item ignore_sql_errors: 
 
 ignore errors on import of DDL etc
+
+=item config_attrs
+
+A hash of information you can use to do replacements inside your configuration
+sets.  For example, if your set looks like:
+
+   {
+     "sets": [ {
+       "class": "Artist",
+       "ids": ["1", "3"],
+       "fetch": [ {
+         "rel": "cds",
+         "quantity": "__ATTR(quantity)__",
+       } ]
+     } ]
+   }
+
+    my $fixtures = DBIx::Class::Fixtures->new( {
+      config_dir => '/home/me/app/fixture_configs'
+      config_attrs => {
+        quantity => 100,
+      },
+    });
+
+You may wish to do this if you want to let whoever runs the dumps have a bit
+more control
 
 =back
 
@@ -426,7 +516,8 @@ sub new {
               debug => $params->{debug} || 0,
               ignore_sql_errors => $params->{ignore_sql_errors},
               dumped_objects => {},
-              use_create => $params->{use_create} || 0
+              use_create => $params->{use_create} || 0,
+              config_attrs => $params->{config_attrs} || {},
   };
 
   bless $self, $class;
@@ -556,6 +647,11 @@ sub dump {
   $tmp_output_dir->file('_dumper_version')
                  ->openw
                  ->print($VERSION);
+
+  # write our current config set
+  $tmp_output_dir->file('_config_set')
+                 ->openw
+                 ->print( Dumper $config );
 
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
@@ -696,6 +792,46 @@ sub dump_rs {
 sub dump_object {
   my ($self, $object, $params) = @_;  
   my $set = $params->{set};
+
+  my $v = Data::Visitor::Callback->new(
+    plain_value => sub {
+      my ($visitor, $data) = @_;
+      my $subs = {
+       ENV => sub {
+          my ( $self, $v ) = @_;
+          if (! defined($ENV{$v})) {
+            return "";
+          } else {
+            return $ENV{ $v };
+          }
+        },
+        ATTR => sub {
+          my ($self, $v) = @_;
+          if(my $attr = $self->config_attrs->{$v}) {
+            return $attr;
+          } else {
+            return "";
+          }
+        },
+        catfile => sub {
+          my ($self, @args) = @_;
+          catfile(@args);
+        },
+        catdir => sub {
+          my ($self, @args) = @_;
+          catdir(@args);
+        },
+      };
+
+      my $subsre = join( '|', keys %$subs ); 
+      $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg;
+
+      return $_;
+    }
+  );
+  
+  $v->visit( $set );
+
   die 'no dir passed to dump_object' unless $params->{set_dir};
   die 'no object passed to dump_object' unless $object;
 
@@ -720,11 +856,25 @@ sub dump_object {
       join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix'
   );
 
-
   # write file
   unless ($exists) {
     $self->msg('-- dumping ' . $file->stringify, 2);
     my %ds = $object->get_columns;
+
+    if($set->{external}) {
+      foreach my $field (keys %{$set->{external}}) {
+        my $key = $ds{$field};
+        my ($plus, $class) = ( $set->{external}->{$field}->{class}=~/^(\+)*(.+)$/);
+        my $args = $set->{external}->{$field}->{args};
+
+        $class = "DBIx::Class::Fixtures::External::$class" unless $plus;
+        eval "use $class";
+
+        $ds{external}->{$field} =
+          encode_base64( $class
+           ->backup($key => $args));
+      }
+    }
 
     # mess with dates if specified
     if ($set->{datetime_relative}) {
@@ -1122,6 +1272,55 @@ sub populate {
   $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
   my $version_file = file($fixture_dir, '_dumper_version');
+  my $config_set_path = file($fixture_dir, '_config_set');
+  my $config_set = -e $config_set_path ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
+
+  my $v = Data::Visitor::Callback->new(
+    plain_value => sub {
+      my ($visitor, $data) = @_;
+      my $subs = {
+       ENV => sub {
+          my ( $self, $v ) = @_;
+          if (! defined($ENV{$v})) {
+            return "";
+          } else {
+            return $ENV{ $v };
+          }
+        },
+        ATTR => sub {
+          my ($self, $v) = @_;
+          if(my $attr = $self->config_attrs->{$v}) {
+            return $attr;
+          } else {
+            return "";
+          }
+        },
+        catfile => sub {
+          my ($self, @args) = @_;
+          catfile(@args);
+        },
+        catdir => sub {
+          my ($self, @args) = @_;
+          catdir(@args);
+        },
+      };
+
+      my $subsre = join( '|', keys %$subs ); 
+      $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg;
+
+      return $_;
+    }
+  );
+  
+  $v->visit( $config_set );
+
+
+  my %sets_by_src;
+  if($config_set) {
+    %sets_by_src = map { delete($_->{class}) => $_ }
+      @{$config_set->{sets}}
+  }
+
 #  DBIx::Class::Exception->throw('no version file found');
 #    unless -e $version_file;
 
@@ -1173,6 +1372,18 @@ sub populate {
           my $HASH1;
           eval($contents);
           $HASH1 = $fixup_visitor->visit($HASH1) if $fixup_visitor;
+          if(my $external = delete $HASH1->{external}) {
+            my @fields = keys %{$sets_by_src{$source}->{external}};
+            foreach my $field(@fields) {
+              my $key = $HASH1->{$field};
+              my $content = decode_base64 ($external->{$field});
+              my $args = $sets_by_src{$source}->{external}->{$field}->{args};
+              my ($plus, $class) = ( $sets_by_src{$source}->{external}->{$field}->{class}=~/^(\+)*(.+)$/);
+              $class = "DBIx::Class::Fixtures::External::$class" unless $plus;
+              eval "use $class";
+              $class->restore($key, $content, $args);
+            }
+          }
           if ( $params->{use_create} ) {
             $rs->create( $HASH1 );
           } else {

@@ -16,12 +16,15 @@ requires 'JSON::Syck' => 0.26;
 requires 'Data::Dump::Streamer' => 2.05;
 requires 'Hash::Merge' => 0.10;
 requires 'Scalar::Util';
+requires 'MIME::Base64';
+requires 'File::Spec::Functions';
 
 requires 'DateTime::Format::SQLite' => 0.10;
 requires 'DateTime::Format::MySQL' => 0;
 requires 'DateTime::Format::Pg' => 0;
 
-build_requires 'Test::More'       => 0.7;
+test_requires 'Test::More';
+test_requires 'DBIx::Class::InflateColumn::FS';
 
 tests_recursive();
 

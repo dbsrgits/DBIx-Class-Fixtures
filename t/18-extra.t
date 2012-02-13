@@ -23,6 +23,7 @@ close($fh);
 my $fixtures = DBIx::Class::Fixtures
   ->new({
     config_dir => 't/var/configs',
+    config_attrs => { photo_dir => './t/var/files' },
     debug => 0 });
 
 ok(
