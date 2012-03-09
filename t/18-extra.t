@@ -56,6 +56,6 @@ ok -e $key, 'File Restored';
 done_testing;
 
 END {
-  rmtree 't/var/files';
-  rmtree 't/var/fixtures/photos';
+    rmtree 't/var/files';
+    rmtree 't/var/fixtures/photos';
 }

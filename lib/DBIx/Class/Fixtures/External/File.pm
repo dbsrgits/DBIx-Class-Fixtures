@@ -30,9 +30,9 @@ sub backup {
 
 sub restore {
   my ($class, $key, $content, $args) = @_;
-  my ($vol, $directory, $file) = splitpath catfile($args->{path}, $key);
+  my $path = catfile($args->{path}, $key);
+  my ($vol, $directory, $file) = splitpath($path);
   mkpath($directory) unless -d $directory;
-  my $path = catfile($vol, $directory, $file);
   $class->_save($path, $content);
 }
 
