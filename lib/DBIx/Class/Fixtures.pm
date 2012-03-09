@@ -28,7 +28,7 @@ __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
 
 =head1 VERSION
 
-Version 1.001013
+Version 1.001014
 
 =cut
 

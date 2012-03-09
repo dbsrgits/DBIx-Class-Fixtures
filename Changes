@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001015
+- ::External::File makes the path if its missing
+
 1.001014
 - Allow you to perform value substitutions inside config-sets
 - Added a framework to allow you to backup / restore data external to the
