@@ -1397,11 +1397,31 @@ sub populate {
           }
         }
         $rs->populate(\@rows) if scalar(@rows);
+
+        ## Now we need to do some db specific cleanup
+        ## this probably belongs in a more isolated space.  Right now this is
+        ## to just handle postgresql SERIAL types that use Sequences
+
+        my $table = $rs->result_source->name;
+        for my $column(my @columns =  $rs->result_source->columns) {
+          my $info = $rs->result_source->column_info($column);
+          if(my $sequence = $info->{sequence}) {
+             $self->msg("- updating sequence $sequence");
+            $rs->result_source->storage->dbh_do(sub {
+              my ($storage, $dbh, @cols) = @_;
+              $self->msg(my $sql = "SELECT setval('${sequence}', (SELECT max($column) FROM ${table}));");
+              my $sth = $dbh->prepare($sql);
+              my $rv = $sth->execute or die $sth->errstr;
+              $self->msg("- $sql");
+            });
+          }
+        }
+
       }
     });
   });
   $self->do_post_ddl( {
-    schema=>$schema, 
+    schema=>$schema,
     post_ddl=>$params->{post_ddl}
   } ) if $params->{post_ddl};
 
