@@ -12,7 +12,18 @@
                 "rel": "cds",
                 "quantity": "all"
             }]
-        }, {
+        },
+        
+        {
+            "class": "Artist",
+            "ids": ["329482389748937"],
+            "fetch": [{
+                "rel": "cds",
+                "quantity": "all"
+            }]
+        },
+      
+        {
             "class": "Artist",
             "ids": ["2"],
             "fetch": [{

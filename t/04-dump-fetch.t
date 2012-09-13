@@ -19,7 +19,7 @@ ok($fixtures->dump({ config => 'fetch.json', schema => $schema, directory => 't/
 # check dump is okay
 my $dir = dir('t/var/fixtures/artist');
 my @children = $dir->children;
-is(scalar(@children), 2, 'right number of artist fixtures created');
+is(scalar(@children), 3, 'right number of artist fixtures created');
 
 # check both artists dumped
 foreach my $id (1, 2) {

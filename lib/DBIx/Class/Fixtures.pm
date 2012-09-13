@@ -892,7 +892,13 @@ sub dump_object {
 
           next unless $value
             && $col_info->{_inflate_info}
-              && uc($col_info->{data_type}) eq 'DATETIME';
+              && (
+                  (uc($col_info->{data_type}) eq 'DATETIME')
+                    or (uc($col_info->{data_type}) eq 'DATE')
+                    or (uc($col_info->{data_type}) eq 'TIME')
+                    or (uc($col_info->{data_type}) eq 'TIMESTAMP')
+                    or (uc($col_info->{data_type}) eq 'INTERVAL')
+                 );
 
           $ds{$col} = $object->get_inflated_column($col)->subtract_datetime($dt);
         }

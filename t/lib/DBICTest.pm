@@ -139,7 +139,8 @@ sub populate_schema {
         [ 1, 'Caterwauler McCrae' ],
         [ 2, 'Random Boy Band' ],
         [ 3, 'We Are Goth' ],
-        [ 4, '' ] # Test overridden new will default name to "Test Name" using use_create => 1.
+        [ 4, '' ], # Test overridden new will default name to "Test Name" using use_create => 1.
+        [ 329482389748937, 'Big PK' ],
     ]);
 
     $schema->populate('CD', [
