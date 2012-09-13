@@ -26,13 +26,7 @@ our $namespace_counter = 0;
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
     _inherited_attributes debug schema_class dumped_objects config_attrs/);
 
-=head1 VERSION
-
-Version 1.001014
-
-=cut
-
-our $VERSION = '1.001015';
+our $VERSION = '1.001016';
 
 =head1 NAME
 
