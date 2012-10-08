@@ -101,7 +101,17 @@ sub deploy_schema {
     my $sql;
     { local $/ = undef; $sql = <IN>; }
     close IN;
-    ($schema->storage->dbh->do($_) || print "Error on SQL: $_\n") for split(/;\n/, $sql);
+
+    foreach my $line (split(/;\n/, $sql)) {
+      print "$line\n";
+      next if(!$line);
+      next if($line =~ /^--/);
+      next if($line =~ /^BEGIN TRANSACTION/m);
+      next if($line =~ /^COMMIT/m);
+      next if $line =~ /^\s+$/; # skip whitespace only
+
+      $schema->storage->dbh->do($line) || print "Error on SQL: $line\n";
+    }
 }
  
 

@@ -1,5 +1,9 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001017
+- Changed the test suite so it doesn't mindlessly break with the changes
+  introduced by DBIC 0.08200.
+
 1.001016
 - Support more Postgresql types for datetime_relative (added TIME, DATE,
   INTERVAL, TIMESTAMP)
