@@ -419,7 +419,7 @@ Provide a value from L</config_attrs>
 
 Create the path to a file from a list
 
-=heade catdir
+=head2 catdir
 
 Create the path to a directory from a list
 
