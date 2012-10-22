@@ -16,7 +16,7 @@
         
         {
             "class": "Artist",
-            "ids": ["329482389748937"],
+            "ids": ["32948"],
             "fetch": [{
                 "rel": "cds",
                 "quantity": "all"
