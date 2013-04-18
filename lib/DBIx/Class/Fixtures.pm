@@ -258,7 +258,7 @@ a JSON representation of a DBIx::Class search clause. For example:
  {
    "sets": [{
      "class": "Artist",
-     "quantiy": "all",
+     "quantity": "all",
      "cond": { "name": "Dave" }
    }]
  }
@@ -275,7 +275,7 @@ This could be specified in the cond hash like so:
  {
    "sets": [ {
      "class": "Artist",
-     "quantiy": "all",
+     "quantity": "all",
      "cond": { "no1_singles": "\> no1_albums" }
    } ]
  }
@@ -290,7 +290,7 @@ An array of relationships to be used in the cond clause.
  {
    "sets": [ {
      "class": "Artist",
-     "quantiy": "all",
+     "quantity": "all",
      "cond": { "cds.position": { ">": 4 } },
      "join": ["cds"]
    } ]
