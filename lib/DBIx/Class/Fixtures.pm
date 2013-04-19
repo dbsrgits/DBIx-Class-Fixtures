@@ -1330,7 +1330,7 @@ sub populate {
   }
   $self->msg("- creating temp dir");
   $tmp_fixture_dir->mkpath();
-  for ( map { $schema->source($_)->from } $schema->sources) {
+  for ( map { lc $schema->source($_)->from } $schema->sources ) {
     my $from_dir = $fixture_dir->subdir($_);
     next unless -e $from_dir;
     dircopy($from_dir, $tmp_fixture_dir->subdir($_) );
