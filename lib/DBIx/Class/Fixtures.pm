@@ -18,6 +18,7 @@ use Hash::Merge qw( merge );
 use Data::Dumper;
 use Class::C3::Componentised;
 use MIME::Base64;
+use File::Temp qw/tempdir/;
 
 use base qw(Class::Accessor::Grouped);
 
@@ -628,7 +629,7 @@ sub dump {
   }
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = dir($output_dir, '-~dump~-' . $<);
+  my $tmp_output_dir = dir(tmpdir());
 
   if (-e $tmp_output_dir) {
     $self->msg("- clearing existing $tmp_output_dir");
@@ -1270,7 +1271,7 @@ sub populate {
   return 1 if $params->{no_populate}; 
   
   $self->msg("\nimporting fixtures");
-  my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
+  my $tmp_fixture_dir = dir(tmpdir());
   my $version_file = file($fixture_dir, '_dumper_version');
   my $config_set_path = file($fixture_dir, '_config_set');
   my $config_set = -e $config_set_path ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
