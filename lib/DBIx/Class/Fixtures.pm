@@ -1466,6 +1466,8 @@ sub msg {
 
   Frank Switalski <fswitalski@gmail.com>
 
+  Chris Akins <chris.hexx@gmail.com>
+
 =head1 LICENSE
 
   This library is free software under the same license as perl itself
