@@ -6,7 +6,7 @@ use warnings;
 use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
-use Path::Class qw(dir file);
+use Path::Class qw(dir file tempdir);
 use File::Spec::Functions 'catfile', 'catdir';
 use Config::Any::JSON;
 use Data::Dump::Streamer;
@@ -26,7 +26,7 @@ our $namespace_counter = 0;
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
     _inherited_attributes debug schema_class dumped_objects config_attrs/);
 
-our $VERSION = '1.001018';
+our $VERSION = '1.001019';
 
 =head1 NAME
 
@@ -628,7 +628,7 @@ sub dump {
   }
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = dir($output_dir, '-~dump~-' . $<);
+  my $tmp_output_dir = tempdir();
 
   if (-e $tmp_output_dir) {
     $self->msg("- clearing existing $tmp_output_dir");
@@ -1270,7 +1270,7 @@ sub populate {
   return 1 if $params->{no_populate}; 
   
   $self->msg("\nimporting fixtures");
-  my $tmp_fixture_dir = dir($fixture_dir, "-~populate~-" . $<);
+  my $tmp_fixture_dir = tempdir();
   my $version_file = file($fixture_dir, '_dumper_version');
   my $config_set_path = file($fixture_dir, '_config_set');
   my $config_set = -e $config_set_path ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
@@ -1464,6 +1464,8 @@ sub msg {
   Drew Taylor <taylor.andrew.j@gmail.com>
 
   Frank Switalski <fswitalski@gmail.com>
+
+  Chris Akins <chris.hexx@gmail.com>
 
 =head1 LICENSE
 

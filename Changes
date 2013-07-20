@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001019
+- Fixed issue when using fixtures and parallel testing (such as prove -j9 ...)
+
 1.001018
 - Reduced the size of a PK in the fixtures to stop (hopefully) some occasional
   error reports
