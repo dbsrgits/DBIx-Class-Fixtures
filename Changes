@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001020
+- Bumped some dependencies to stop cpan tester fails.
+
 1.001019
 - Fixed issue when using fixtures and parallel testing (such as prove -j9 ...)
 
