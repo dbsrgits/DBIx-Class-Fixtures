@@ -567,12 +567,47 @@ directory. For example:
  /home/me/app/fixtures/artist/3.fix
  /home/me/app/fixtures/producer/5.fix
 
-schema and directory are required attributes. also, one of config or all must
-be specified.
+C<schema> and C<directory> are required attributes. Also, one of C<config> or C<all> must
+be specified. The attributes HashRef can have the following parameters:
 
-Lastly, the C<config> parameter can be a Perl HashRef instead of a file name.
-If this form is used your HashRef should conform to the structure rules defined
-for the JSON representations.
+=over
+
+=item all
+
+A boolean which defaults to false. If true, dump everything that is in the schema.
+
+=item config
+
+Filename or HashRef. One of the C<config> or C<all> attributes must be set.
+
+If the HashRef form is used your HashRef should conform to the structure rules
+defined for the JSON representations.
+
+=item schema
+
+DBIx::Class::Schema object for the data you want to dump
+
+=item directory
+
+directory to store the dumped objects
+
+=item predump_hook
+
+A code reference that will be called for each row returned. It will be provided
+the Result Source and the row as a HashRef. The row can be modified before being
+written to the fixture files. For example:
+
+ $fixture->dump({
+     ...,
+     predump_hook => sub {
+         my ($source, $data) = @_;
+         if ($source->name eq "ResultSource_X") {
+             $data->{'sensitive_row'} = 'redacted';
+         }
+     }
+ );
+
+=back
 
 =cut
 
@@ -592,6 +627,10 @@ sub dump {
 
   if($params->{excludes} && !$params->{all}) {
     return DBIx::Class::Exception->throw("'excludes' param only works when using the 'all' param");
+  }
+
+  if($params->{predump_hook} && ref($params->{predump_hook} ne "CODE")) {
+   return DBIx::Class::Exception->throw('predump_hook param should be a coderef');
   }
 
   my $schema = $params->{schema};
@@ -702,6 +741,7 @@ sub dump {
     }
 
     $source_options{set_dir} = $tmp_output_dir;
+    $source_options{predump_hook} = $params->{predump_hook} if (exists($params->{predump_hook}));
     $self->dump_rs($rs, \%source_options );
   }
 
@@ -902,6 +942,7 @@ sub dump_object {
     }
 
     # do the actual dumping
+    $params->{predump_hook}->($src, \%ds) if ( exists($params->{predump_hook}) );
     my $serialized = Dump(\%ds)->Out();
     $file->openw->print($serialized);
   }
@@ -1229,6 +1270,11 @@ If you wish to deal with cleaning the schema yourself, then pass in a C<schema>
 attribute containing the connected schema you wish to operate on and set the
 C<no_deploy> attribute.
 
+If you wish to fix-up data upon populate, you can provide populate a
+C<prepopulate_hook> coderef that will be passed the ResultSource and the
+row as a HashRef. This is exactly like C<predump_hook>, only called during
+C<populate> instead of C<dump>.
+
 =cut
 
 sub populate {
@@ -1266,6 +1312,9 @@ sub populate {
     DBIx::Class::Exception->throw('you must set the ddl and connection_details params');
   }
 
+  if ($params->{prepopulate_hook} && ref($params->{prepopulate_hook}) ne "CODE") {
+      DBIx::Class::Exception->throw('prepopulate_hook must be a coderef');
+  }
 
   return 1 if $params->{no_populate}; 
   
@@ -1384,6 +1433,8 @@ sub populate {
               $class->restore($key, $content, $args);
             }
           }
+
+          $params->{prepopulate_hook}->($rs->result_source, $HASH1) if (exists($params->{prepopulate_hook}));
           if ( $params->{use_create} ) {
             $rs->create( $HASH1 );
           } else {
