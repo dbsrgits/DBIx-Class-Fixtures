@@ -718,8 +718,11 @@ sub dump {
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  move($_, dir($output_dir, $_->relative($_->parent)->stringify)) 
-    for $tmp_output_dir->children;
+  for ($tmp_output_dir->children) {
+    my $from = $_;
+    my $to = dir($output_dir, $from->relative($from->parent)->stringify);
+    move($from, $to) || die "File::Copy->move('$from', '$to') failed: $!";
+  }
 
   if (-e $output_dir) {
     $self->msg("- clearing tmp dir $tmp_output_dir");
