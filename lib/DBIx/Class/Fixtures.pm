@@ -633,6 +633,9 @@ sub dump {
    return DBIx::Class::Exception->throw('predump_hook param should be a coderef');
   }
 
+  # Clear dumped_objects in case of subsequent calls to dump with same fixture object
+  $self->{dumped_objects} = {};
+
   my $schema = $params->{schema};
   my $config;
   if ($params->{config}) {
