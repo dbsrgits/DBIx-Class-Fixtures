@@ -60,4 +60,13 @@ CREATE TABLE producer (
   name varchar(100) NOT NULL
 );
 
+--
+-- Table:: Artist_UC
+--
+CREATE TABLE Artist_UC (
+  artistid INTEGER PRIMARY KEY NOT NULL,
+  name varchar(100)
+);
+  
+
 COMMIT;

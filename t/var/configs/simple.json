@@ -8,5 +8,9 @@
         "sets": [{
             "class": "Artist",
             "quantity": 1
-        }]
+        },
+		{
+            "class": "Artist_UC_RS",
+            "quantity": 2
+		}]
 }

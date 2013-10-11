@@ -38,7 +38,7 @@ foreach my $set ('simple', 'quantity', 'fetch', 'rules') {
 
   my $fixture_dir = dir('t/var/fixtures');
   foreach my $class ($schema->sources) {
-    my $source_dir = dir($fixture_dir, lc($class));
+    my $source_dir = dir($fixture_dir, lc $schema->source($class)->from);
     is($schema->resultset($class)->count, 
        (-e $source_dir) ? scalar($source_dir->children) : 0, 
        "correct number of $set " . lc($class)

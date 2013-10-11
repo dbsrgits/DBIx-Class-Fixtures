@@ -7,7 +7,7 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper; 
 
-plan tests => 16;
+plan tests => 18;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema( ), 'got schema');

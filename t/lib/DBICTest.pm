@@ -211,6 +211,15 @@ sub populate_schema {
         [ 17, 1, 2, "Apiary"],
         [ 18, 1, 3, "Beehind You"],
     ]);
+
+    $schema->populate('Artist_UC_RS', [
+        [ qw/artistid name/ ],
+        [ 1, 'Caterwauler McCrae' ],
+        [ 2, 'Random Boy Band' ],
+        [ 3, 'We Are Goth' ],
+        [ 4, '' ], # Test overridden new will default name to "Test Name" using use_create => 1.
+        [ 32948, 'Big PK' ],
+    ]);
 }
 
 1;
