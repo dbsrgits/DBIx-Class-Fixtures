@@ -26,7 +26,7 @@ our $namespace_counter = 0;
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
     _inherited_attributes debug schema_class dumped_objects config_attrs/);
 
-our $VERSION = '1.001020';
+our $VERSION = '1.001021';
 
 =head1 NAME
 
@@ -718,8 +718,7 @@ sub dump {
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  move($_, dir($output_dir, $_->relative($_->parent)->stringify)) 
-    for $tmp_output_dir->children;
+  dircopy($tmp_output_dir, $output_dir);
 
   if (-e $output_dir) {
     $self->msg("- clearing tmp dir $tmp_output_dir");
