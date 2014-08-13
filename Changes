@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001022
+- No change from last version
+
 1.001021_01
 - add in option use_find_or_create
 
