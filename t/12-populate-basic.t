@@ -81,3 +81,21 @@ $fixtures->populate({
 });
 $schema = DBICTest->init_schema( no_deploy => 1, no_populate => 1 );
 is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "use_create => 1 ok" );
+
+$schema = DBICTest->init_schema( no_populate => 1 );
+$fixtures->populate({
+	directory => 't/var/fixtures',
+	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''],
+	schema => $schema,
+	no_deploy => 1,
+	use_find_or_create => 1
+});
+is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "use_find_or_create => 1 ok" );
+$fixtures->populate({
+	directory => 't/var/fixtures',
+	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''],
+	schema => $schema,
+	no_deploy => 1,
+	use_find_or_create => 1
+});
+is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "idempotent use_find_or_create => 1 ok" );
