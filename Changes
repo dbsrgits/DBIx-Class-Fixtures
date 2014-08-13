@@ -1,5 +1,8 @@
 Revision history for DBIx-Class-Fixtures
 
+1.001021_01
+- add in option use_find_or_create
+
 1.001021
 - Applied patch to solve issue when trying to copy fixtures across volumes
 
