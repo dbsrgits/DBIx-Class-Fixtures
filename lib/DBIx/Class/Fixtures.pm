@@ -868,7 +868,7 @@ sub dump_object {
 
         $ds{external}->{$field} =
           encode_base64( $class
-           ->backup($key => $args));
+           ->backup($key => $args),'');
       }
     }
 
