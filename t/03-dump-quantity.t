@@ -17,7 +17,7 @@ ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug 
 ok($fixtures->dump({ config => 'quantity.json', schema => $schema, directory => 't/var/fixtures' }), 'quantity dump executed okay');
 
 # check dump is okay
-my $dir = dir('t/var/fixtures/cd');
+my $dir = dir('t/var/fixtures/CD');
 my @children = $dir->children;
 is(scalar(@children), 3, 'right number of cd fixtures created');
 

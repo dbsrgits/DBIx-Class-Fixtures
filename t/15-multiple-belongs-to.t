@@ -21,7 +21,7 @@ my $dir = dir('t/var/fixtures');
 
 ok( -e 't/var/fixtures/producer', "We fetched some producers" );
 ok( -e 't/var/fixtures/cd_to_producer', "We fetched some cd/producer xrefs" );
-ok( -e 't/var/fixtures/cd', "We fetched some cds" );
+ok( -e 't/var/fixtures/CD', "We fetched some cds" );
 ok( -e 't/var/fixtures/artist', "We fetched some artists" );
 
 __END__

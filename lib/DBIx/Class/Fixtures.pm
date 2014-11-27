@@ -844,7 +844,7 @@ sub dump_object {
 
 
   # write dir and gen filename
-  my $source_dir = $params->{set_dir}->subdir(lc $src->from);
+  my $source_dir = $params->{set_dir}->subdir($self->_name_for_source($src));
   $source_dir->mkpath(0, 0777);
 
   # strip dir separators from file name
@@ -1045,7 +1045,7 @@ sub _generate_schema {
   unless( $pre_schema ) {
     return DBIx::Class::Exception->throw('connection details not valid');
   }
-  my @tables = map { $pre_schema->source($_)->from } $pre_schema->sources;
+  my @tables = map { $self->_name_for_source($pre_schema->source($_)) } $pre_schema->sources;
   $self->msg("Tables to drop: [". join(', ', sort @tables) . "]");
   my $dbh = $pre_schema->storage->dbh;
 
@@ -1336,7 +1336,7 @@ sub populate {
   }
   $self->msg("- creating temp dir");
   $tmp_fixture_dir->mkpath();
-  for ( map { $schema->source($_)->from } $schema->sources) {
+  for ( map { $self->_name_for_source($schema->source($_)) } $schema->sources) {
     my $from_dir = $fixture_dir->subdir($_);
     next unless -e $from_dir;
     dircopy($from_dir, $tmp_fixture_dir->subdir($_) );
@@ -1368,7 +1368,7 @@ sub populate {
       foreach my $source (sort $schema->sources) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
-        my $source_dir = $tmp_fixture_dir->subdir( lc $rs->result_source->from );
+        my $source_dir = $tmp_fixture_dir->subdir( $self->_name_for_source($rs->result_source) );
         next unless (-e $source_dir);
         my @rows;
         while (my $file = $source_dir->next) {
@@ -1455,6 +1455,16 @@ sub msg {
   } else {
 	print $subject . "\n";
   }
+}
+
+# Helper method for ensuring that the name used for a given source
+# is always the same (This is used to name the fixture directories
+# for example)
+
+sub _name_for_source {
+    my ($self, $source) = @_;
+
+    return ref $source->name ? $source->source_name : $source->name;
 }
 
 =head1 AUTHOR

@@ -19,7 +19,7 @@ ok($fixtures->dump({ config => 'rules2.json', schema => $schema, directory => 't
 # check dump is okay
 foreach my $test (
   [ 'artist', 1, 'Artist', 'artistid' ],
-  [ 'cd', 2, 'CD', 'cdid' ],
+  [ 'CD', 2, 'CD', 'cdid' ],
 ) {
   my ($dirname, $count, $moniker, $id) = @$test;
   my $dir = dir("t/var/fixtures/$dirname");

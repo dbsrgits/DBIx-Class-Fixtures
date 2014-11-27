@@ -31,7 +31,7 @@ ok($fixtures->dump({ config => 'scalar_ref.json', schema => $schema, directory =
 
 {
   # check dump is okay
-  my $dir = dir('t/var/fixtures/cd');
+  my $dir = dir('t/var/fixtures/CD');
   my @children = $dir->children;
   is(scalar(@children), 1, 'right number of fixtures created');
   
