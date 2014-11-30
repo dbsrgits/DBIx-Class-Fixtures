@@ -2,6 +2,9 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+- optimization: add empty string as second arg to encode_base64 - rammo++
+    https://github.com/dbsrgits/DBIx-Class-Fixtures/pull/1/commits
+
 1.001024  2014-08-15 13:55:57+01:00 Europe/London
 
 -  Missing test dependency added
