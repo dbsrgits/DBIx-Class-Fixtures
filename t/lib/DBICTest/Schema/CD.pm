@@ -3,7 +3,7 @@ package # hide from PAUSE
 
 use base 'DBIx::Class::Core';
 
-__PACKAGE__->table('cd');
+__PACKAGE__->table(\'cd');
 __PACKAGE__->add_columns(
   'cdid' => {
     data_type => 'integer',

@@ -31,7 +31,7 @@ foreach my $id (1, 2) {
 my $artist1 = $schema->resultset('Artist')->find(1);
 my @artist1_cds = $artist1->cds->all;
 foreach my $cd (@artist1_cds) {
-  my $cd_fix_file = dir('t/var/fixtures', 'cd', $cd->id . '.fix');
+  my $cd_fix_file = dir('t/var/fixtures', 'CD', $cd->id . '.fix');
   ok(-e $cd_fix_file, "artist1's cd rel dumped okay");
 }
 
@@ -39,11 +39,11 @@ foreach my $cd (@artist1_cds) {
 my $artist2 = $schema->resultset('Artist')->find(2);
 my @artist2_cds = $artist2->cds->search({ year => { '>' => 2002 } });
 foreach my $cd (@artist2_cds) {
-  my $cd_fix_file = dir('t/var/fixtures', 'cd', $cd->id . '.fix');
+  my $cd_fix_file = dir('t/var/fixtures', 'CD', $cd->id . '.fix');
   ok(-e $cd_fix_file, "artist2's cd rel dumped okay");
 }
 
-my $cd_dir = dir('t/var/fixtures/cd');
+my $cd_dir = dir('t/var/fixtures/CD');
 @children = $cd_dir->children;
 is(scalar(@children), scalar(@artist1_cds) + scalar(@artist2_cds), 'no extra cd fixtures dumped');
 

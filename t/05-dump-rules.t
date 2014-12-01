@@ -18,7 +18,7 @@ ok($fixtures->dump({ config => 'rules.json', schema => $schema, directory => 't/
 
 # check dump is okay
 my $dir = dir('t/var/fixtures');
-my $cd_dir = dir($dir, 'cd');
+my $cd_dir = dir($dir, 'CD');
 my $track_dir = dir($dir, 'track');
 
 # check only artist1's cds that matched the rule were fetched

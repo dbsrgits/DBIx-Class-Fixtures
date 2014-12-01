@@ -22,7 +22,7 @@ my $fixture_dir = 't/var/fixtures';
 
     foreach my $source ($schema->sources) {
             my $rs = $schema->resultset($source);
-            my $dir =  dir($fixture_dir, $rs->result_source->from);
+            my $dir =  dir($fixture_dir, ref $rs->result_source->name ? $rs->result_source->source_name : $rs->result_source->name);
             my @children = $dir->children;
             is (scalar(@children), $rs->count, 'all objects from $source dumped');
     }
@@ -36,7 +36,7 @@ my $fixture_dir = 't/var/fixtures';
     foreach my $source ($schema->sources) {
             my $rs = $schema->resultset($source);
             next if $rs->result_source->from eq 'tags';
-            my $dir =  dir("$fixture_dir/excludes", $rs->result_source->from);
+            my $dir =  dir("$fixture_dir/excludes", ref $rs->result_source->name ? $rs->result_source->source_name : $rs->result_source->name);
             my @children = $dir->children;
             is (scalar(@children), $rs->count, 'all objects from $source dumped');
     }
