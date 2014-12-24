@@ -6,18 +6,15 @@ use warnings;
 use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
-use Path::Class qw(dir file tempdir);
-use File::Spec::Functions 'catfile', 'catdir';
 use Config::Any::JSON;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
-use File::Path;
-use File::Copy::Recursive qw/dircopy/;
-use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 use Class::C3::Componentised;
 use MIME::Base64;
+use IO::All;
+use File::Temp qw/tempdir/;
 
 use base qw(Class::Accessor::Grouped);
 
@@ -501,7 +498,7 @@ sub new {
     return DBIx::Class::Exception->throw('config_dir param not specified');
   }
 
-  my $config_dir = dir($params->{config_dir});
+  my $config_dir = io->dir($params->{config_dir});
   unless (-e $params->{config_dir}) {
     return DBIx::Class::Exception->throw('config_dir directory doesn\'t exist');
   }
@@ -532,10 +529,10 @@ be a list of the json based files containing dump rules.
 my @config_sets;
 sub available_config_sets {
   @config_sets = scalar(@config_sets) ? @config_sets : map {
-    $_->basename;
+    $_->filename;
   } grep { 
-    -f $_ && $_=~/json$/;
-  } dir((shift)->config_dir)->children;
+    -f "$_" && $_=~/json$/;
+  } (shift)->config_dir->all;
 }
 
 =head2 dump
@@ -604,7 +601,7 @@ sub dump {
       $params->{config} : 
       do {
         #read config
-        my $config_file = $self->config_dir->file($params->{config});
+        my $config_file = io->catfile($self->config_dir, $params->{config});
         $self->load_config_file($config_file);
       };
   } elsif ($params->{all}) {
@@ -624,16 +621,16 @@ sub dump {
     DBIx::Class::Exception->throw('must pass config or set all');
   }
 
-  my $output_dir = dir($params->{directory});
-  unless (-e $output_dir) {
+  my $output_dir = io->dir($params->{directory});
+  unless (-e "$output_dir") {
     $output_dir->mkpath ||
     DBIx::Class::Exception->throw("output directory does not exist at $output_dir");
   }
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = tempdir();
+  my $tmp_output_dir = io->dir(tempdir);;
 
-  if (-e $tmp_output_dir) {
+  if (-e "$tmp_output_dir") {
     $self->msg("- clearing existing $tmp_output_dir");
     $tmp_output_dir->rmtree;
   }
@@ -641,14 +638,10 @@ sub dump {
   $tmp_output_dir->mkpath;
 
   # write version file (for the potential benefit of populate)
-  $tmp_output_dir->file('_dumper_version')
-                 ->openw
-                 ->print($VERSION);
+  $tmp_output_dir->file('_dumper_version')->print($VERSION);
 
   # write our current config set
-  $tmp_output_dir->file('_config_set')
-                 ->openw
-                 ->print( Dumper $config );
+  $tmp_output_dir->file('_config_set')->print( Dumper $config );
 
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
@@ -709,24 +702,24 @@ sub dump {
   }
 
   # clear existing output dir
-  foreach my $child ($output_dir->children) {
+  foreach my $child ($output_dir->all) {
     if ($child->is_dir) {
-      next if ($child eq $tmp_output_dir);
-      if (grep { $_ =~ /\.fix/ } $child->children) {
+      next if ("$child" eq "$tmp_output_dir");
+      if (grep { $_ =~ /\.fix/ } $child->all) {
         $child->rmtree;
       }
     } elsif ($child =~ /_dumper_version$/) {
-      $child->remove;
+      $child->unlink;
     }
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  dircopy($tmp_output_dir, $output_dir);
+  $tmp_output_dir->copy("$output_dir");
 
-  if (-e $output_dir) {
+  if (-e "$output_dir") {
     $self->msg("- clearing tmp dir $tmp_output_dir");
     # delete existing fixture set
-    $tmp_output_dir->remove;
+    $tmp_output_dir->rmtree;
   }
 
   $self->msg("done");
@@ -737,7 +730,7 @@ sub dump {
 sub load_config_file {
   my ($self, $config_file) = @_;
   DBIx::Class::Exception->throw("config does not exist at $config_file")
-    unless -e $config_file;
+    unless -e "$config_file";
 
   my $config = Config::Any::JSON->load($config_file);
 
@@ -756,7 +749,7 @@ sub load_config_file {
       my $include_file = $self->config_dir->file($include_config->{file});
 
       DBIx::Class::Exception->throw("config does not exist at $include_file")
-        unless -e $include_file;
+        unless -e "$include_file";
       
       my $include = Config::Any::JSON->load($include_file);
       $self->msg($include);
@@ -811,11 +804,11 @@ sub dump_object {
         },
         catfile => sub {
           my ($self, @args) = @_;
-          catfile(@args);
+          io->catfile(@args);
         },
         catdir => sub {
           my ($self, @args) = @_;
-          catdir(@args);
+          io->catdir(@args);
         },
       };
 
@@ -844,7 +837,7 @@ sub dump_object {
 
 
   # write dir and gen filename
-  my $source_dir = $params->{set_dir}->subdir($self->_name_for_source($src));
+  my $source_dir = io->catdir($params->{set_dir}, $self->_name_for_source($src));
   $source_dir->mkpath(0, 0777);
 
   # Convert characters not allowed on windows
@@ -854,7 +847,7 @@ sub dump_object {
 
   # write file
   unless ($exists) {
-    $self->msg('-- dumping ' . $file->stringify, 2);
+    $self->msg('-- dumping ' . "$file", 2);
     my %ds = $object->get_columns;
 
     if($set->{external}) {
@@ -905,7 +898,7 @@ sub dump_object {
 
     # do the actual dumping
     my $serialized = Dump(\%ds)->Out();
-    $file->openw->print($serialized);
+    $file->print($serialized);
   }
 
   # don't bother looking at rels unless we are actually planning to dump at least one type
@@ -1107,7 +1100,7 @@ example:
       configs => [qw/one.json other.json/],
       directory_template => sub {
         my ($fixture, $params, $set) = @_;
-        return File::Spec->catdir('var', 'fixtures', $params->{schema}->version, $set);
+        return io->catdir('var', 'fixtures', $params->{schema}->version, $set);
       },
     });
 
@@ -1150,7 +1143,7 @@ example:
       schema => $schema,
       directory_template => sub {
         my ($fixture, $params, $set) = @_;
-        return File::Spec->catdir('var', 'fixtures', $params->{schema}->version, $set);
+        return io->catdir('var', 'fixtures', $params->{schema}->version, $set);
       },
     });
 
@@ -1246,16 +1239,16 @@ sub populate {
   DBIx::Class::Exception->throw('directory param not specified')
     unless $params->{directory};
 
-  my $fixture_dir = dir(delete $params->{directory});
+  my $fixture_dir = io->dir(delete $params->{directory});
   DBIx::Class::Exception->throw("fixture directory '$fixture_dir' does not exist")
-    unless -d $fixture_dir;
+    unless -d "$fixture_dir";
 
   my $ddl_file;
   my $dbh;
   my $schema;
   if ($params->{ddl} && $params->{connection_details}) {
-    $ddl_file = file(delete $params->{ddl});
-    unless (-e $ddl_file) {
+    $ddl_file = io->file(delete $params->{ddl});
+    unless (-e "$ddl_file") {
       return DBIx::Class::Exception->throw('DDL does not exist at ' . $ddl_file);
     }
     unless (ref $params->{connection_details} eq 'ARRAY') {
@@ -1276,10 +1269,10 @@ sub populate {
   return 1 if $params->{no_populate}; 
   
   $self->msg("\nimporting fixtures");
-  my $tmp_fixture_dir = tempdir();
-  my $version_file = file($fixture_dir, '_dumper_version');
-  my $config_set_path = file($fixture_dir, '_config_set');
-  my $config_set = -e $config_set_path ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
+  my $tmp_fixture_dir = io->dir(tempdir());
+  my $version_file = io->file($fixture_dir, '_dumper_version');
+  my $config_set_path = io->file($fixture_dir, '_config_set');
+  my $config_set = -e "$config_set_path" ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
 
   my $v = Data::Visitor::Callback->new(
     plain_value => sub {
@@ -1303,11 +1296,11 @@ sub populate {
         },
         catfile => sub {
           my ($self, @args) = @_;
-          catfile(@args);
+          io->catfile(@args);
         },
         catdir => sub {
           my ($self, @args) = @_;
-          catdir(@args);
+          io->catdir(@args);
         },
       };
 
@@ -1330,19 +1323,19 @@ sub populate {
 #  DBIx::Class::Exception->throw('no version file found');
 #    unless -e $version_file;
 
-  if (-e $tmp_fixture_dir) {
+  if (-e "$tmp_fixture_dir") {
     $self->msg("- deleting existing temp directory $tmp_fixture_dir");
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
   $tmp_fixture_dir->mkpath();
   for ( map { $self->_name_for_source($schema->source($_)) } $schema->sources) {
-    my $from_dir = $fixture_dir->subdir($_);
-    next unless -e $from_dir;
-    dircopy($from_dir, $tmp_fixture_dir->subdir($_) );
+    my $from_dir = io->catdir($fixture_dir, $_);
+    next unless -e "$from_dir";
+    $from_dir->copy( io->catdir($tmp_fixture_dir, $_)."" );
   }
 
-  unless (-d $tmp_fixture_dir) {
+  unless (-d "$tmp_fixture_dir") {
     DBIx::Class::Exception->throw("Unable to create temporary fixtures dir: $tmp_fixture_dir: $!");
   }
 
@@ -1368,8 +1361,8 @@ sub populate {
       foreach my $source (sort $schema->sources) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
-        my $source_dir = $tmp_fixture_dir->subdir( $self->_name_for_source($rs->result_source) );
-        next unless (-e $source_dir);
+        my $source_dir = io->catdir($tmp_fixture_dir, $self->_name_for_source($rs->result_source));
+        next unless (-e "$source_dir");
         my @rows;
         while (my $file = $source_dir->next) {
           next unless ($file =~ /\.fix$/);
