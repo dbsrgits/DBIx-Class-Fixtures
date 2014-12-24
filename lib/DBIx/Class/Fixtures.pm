@@ -847,9 +847,9 @@ sub dump_object {
   my $source_dir = $params->{set_dir}->subdir($self->_name_for_source($src));
   $source_dir->mkpath(0, 0777);
 
-  # strip dir separators from file name
-  my $file = $source_dir->file(
-      join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix'
+  # Convert characters not allowed on windows
+  my $file = io->catfile("$source_dir",
+      join('-', map { s|[/\\:\*\|\?"<>]|_|g; $_; } @pk_vals) . '.fix'
   );
 
   # write file
