@@ -1270,7 +1270,6 @@ sub populate {
 
   $self->msg("\nimporting fixtures");
   my $tmp_fixture_dir = io->dir(tempdir());
-  my $version_file = io->file($fixture_dir, '_dumper_version');
   my $config_set_path = io->file($fixture_dir, '_config_set');
   my $config_set = -e "$config_set_path" ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
 
@@ -1319,9 +1318,6 @@ sub populate {
     %sets_by_src = map { delete($_->{class}) => $_ }
       @{$config_set->{sets}}
   }
-
-#  DBIx::Class::Exception->throw('no version file found');
-#    unless -e $version_file;
 
   if (-e "$tmp_fixture_dir") {
     $self->msg("- deleting existing temp directory $tmp_fixture_dir");
