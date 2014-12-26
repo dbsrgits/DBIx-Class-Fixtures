@@ -6,18 +6,15 @@ use warnings;
 use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
-use Path::Class qw(dir file tempdir);
-use File::Spec::Functions 'catfile', 'catdir';
 use Config::Any::JSON;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
-use File::Path;
-use File::Copy::Recursive qw/dircopy/;
-use File::Copy qw/move/;
 use Hash::Merge qw( merge );
 use Data::Dumper;
 use Class::C3::Componentised;
 use MIME::Base64;
+use IO::All;
+use File::Temp qw/tempdir/;
 
 use base qw(Class::Accessor::Grouped);
 
@@ -40,8 +37,8 @@ DBIx::Class::Fixtures - Dump data and repopulate a database using rules
 
  ...
 
- my $fixtures = DBIx::Class::Fixtures->new({ 
-     config_dir => '/home/me/app/fixture_configs' 
+ my $fixtures = DBIx::Class::Fixtures->new({
+     config_dir => '/home/me/app/fixture_configs'
  });
 
  $fixtures->dump({
@@ -89,7 +86,7 @@ For example:
          }
        ]
      }
-   ] 
+   ]
  }
 
 This will fetch artists with primary keys 1 and 3, the producer with primary
@@ -115,12 +112,12 @@ rule to specify this. For example:
      {
        "class": "Artist",
        "ids": ["1", "3"]
-     }, 
+     },
      {
        "class": "Producer",
        "ids": ["5"],
        "fetch": [
-         { 
+         {
            "rel": "artists",
            "quantity": "2"
          }
@@ -150,11 +147,11 @@ to CD. This is eqivalent to:
          "rel": "cds",
          "quantity": "all"
        } ]
-     }, 
+     },
      {
        "class": "Producer",
        "ids": ["5"],
-       "fetch": [ { 
+       "fetch": [ {
          "rel": "artists",
          "quantity": "2",
          "fetch": [ {
@@ -326,7 +323,7 @@ not if using for belongs_to or might_have relationships.
 =head2 has_many
 
 Specifies whether to fetch has_many rels for this set. Must be a hash
-containing keys fetch and quantity. 
+containing keys fetch and quantity.
 
 Set fetch to 1 if you want to fetch them, and quantity to either 'all' or an
 integer.
@@ -442,16 +439,16 @@ parameters:
 
 =over
 
-=item config_dir: 
+=item config_dir:
 
 required. must contain a valid path to the directory in which your .json
 configs reside.
 
-=item debug: 
+=item debug:
 
 determines whether to be verbose
 
-=item ignore_sql_errors: 
+=item ignore_sql_errors:
 
 ignore errors on import of DDL etc
 
@@ -501,20 +498,20 @@ sub new {
     return DBIx::Class::Exception->throw('config_dir param not specified');
   }
 
-  my $config_dir = dir($params->{config_dir});
+  my $config_dir = io->dir($params->{config_dir});
   unless (-e $params->{config_dir}) {
     return DBIx::Class::Exception->throw('config_dir directory doesn\'t exist');
   }
 
   my $self = {
-              config_dir => $config_dir,
+              config_dir            => $config_dir,
               _inherited_attributes => [qw/datetime_relative might_have rules belongs_to/],
-              debug => $params->{debug} || 0,
-              ignore_sql_errors => $params->{ignore_sql_errors},
-              dumped_objects => {},
-              use_create => $params->{use_create} || 0,
-              use_find_or_create => $params->{use_find_or_create} || 0,
-              config_attrs => $params->{config_attrs} || {},
+              debug                 => $params->{debug} || 0,
+              ignore_sql_errors     => $params->{ignore_sql_errors},
+              dumped_objects        => {},
+              use_create            => $params->{use_create} || 0,
+              use_find_or_create    => $params->{use_find_or_create} || 0,
+              config_attrs          => $params->{config_attrs} || {},
   };
 
   bless $self, $class;
@@ -532,10 +529,10 @@ be a list of the json based files containing dump rules.
 my @config_sets;
 sub available_config_sets {
   @config_sets = scalar(@config_sets) ? @config_sets : map {
-    $_->basename;
-  } grep { 
-    -f $_ && $_=~/json$/;
-  } dir((shift)->config_dir)->children;
+    $_->filename;
+  } grep {
+    -f "$_" && $_=~/json$/;
+  } shift->config_dir->all;
 }
 
 =head2 dump
@@ -600,16 +597,16 @@ sub dump {
   my $schema = $params->{schema};
   my $config;
   if ($params->{config}) {
-    $config = ref $params->{config} eq 'HASH' ? 
-      $params->{config} : 
+    $config = ref $params->{config} eq 'HASH' ?
+      $params->{config} :
       do {
         #read config
-        my $config_file = $self->config_dir->file($params->{config});
-        $self->load_config_file($config_file);
+        my $config_file = io->catfile($self->config_dir, $params->{config});
+        $self->load_config_file("$config_file");
       };
   } elsif ($params->{all}) {
     my %excludes = map {$_=>1} @{$params->{excludes}||[]};
-    $config = { 
+    $config = {
       might_have => { fetch => 0 },
       has_many => { fetch => 0 },
       belongs_to => { fetch => 0 },
@@ -624,16 +621,16 @@ sub dump {
     DBIx::Class::Exception->throw('must pass config or set all');
   }
 
-  my $output_dir = dir($params->{directory});
-  unless (-e $output_dir) {
+  my $output_dir = io->dir($params->{directory});
+  unless (-e "$output_dir") {
     $output_dir->mkpath ||
     DBIx::Class::Exception->throw("output directory does not exist at $output_dir");
   }
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = tempdir();
+  my $tmp_output_dir = io->dir(tempdir);
 
-  if (-e $tmp_output_dir) {
+  if (-e "$tmp_output_dir") {
     $self->msg("- clearing existing $tmp_output_dir");
     $tmp_output_dir->rmtree;
   }
@@ -641,14 +638,10 @@ sub dump {
   $tmp_output_dir->mkpath;
 
   # write version file (for the potential benefit of populate)
-  $tmp_output_dir->file('_dumper_version')
-                 ->openw
-                 ->print($VERSION);
+  $tmp_output_dir->file('_dumper_version')->print($VERSION);
 
   # write our current config set
-  $tmp_output_dir->file('_config_set')
-                 ->openw
-                 ->print( Dumper $config );
+  $tmp_output_dir->file('_config_set')->print( Dumper $config );
 
   $config->{rules} ||= {};
   my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
@@ -670,22 +663,22 @@ sub dump {
     if ($source->{cond} and ref $source->{cond} eq 'HASH') {
       # if value starts with \ assume it's meant to be passed as a scalar ref
       # to dbic. ideally this would substitute deeply
-      $source->{cond} = { 
-        map { 
-          $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_} 
-                                                   : $source->{cond}->{$_} 
-        } keys %{$source->{cond}} 
+      $source->{cond} = {
+        map {
+          $_ => ($source->{cond}->{$_} =~ s/^\\//) ? \$source->{cond}->{$_}
+                                                   : $source->{cond}->{$_}
+        } keys %{$source->{cond}}
       };
     }
 
-    $rs = $rs->search($source->{cond}, { join => $source->{join} }) 
+    $rs = $rs->search($source->{cond}, { join => $source->{join} })
       if $source->{cond};
 
     $self->msg("- dumping $source->{class}");
 
     my %source_options = ( set => { %{$config}, %{$source} } );
     if ($source->{quantity}) {
-      $rs = $rs->search({}, { order_by => $source->{order_by} }) 
+      $rs = $rs->search({}, { order_by => $source->{order_by} })
         if $source->{order_by};
 
       if ($source->{quantity} =~ /^\d+$/) {
@@ -709,24 +702,24 @@ sub dump {
   }
 
   # clear existing output dir
-  foreach my $child ($output_dir->children) {
+  foreach my $child ($output_dir->all) {
     if ($child->is_dir) {
-      next if ($child eq $tmp_output_dir);
-      if (grep { $_ =~ /\.fix/ } $child->children) {
+      next if ("$child" eq "$tmp_output_dir");
+      if (grep { $_ =~ /\.fix/ } $child->all) {
         $child->rmtree;
       }
     } elsif ($child =~ /_dumper_version$/) {
-      $child->remove;
+      $child->unlink;
     }
   }
 
   $self->msg("- moving temp dir to $output_dir");
-  dircopy($tmp_output_dir, $output_dir);
+  $tmp_output_dir->copy("$output_dir");
 
-  if (-e $output_dir) {
+  if (-e "$output_dir") {
     $self->msg("- clearing tmp dir $tmp_output_dir");
     # delete existing fixture set
-    $tmp_output_dir->remove;
+    $tmp_output_dir->rmtree;
   }
 
   $self->msg("done");
@@ -737,7 +730,7 @@ sub dump {
 sub load_config_file {
   my ($self, $config_file) = @_;
   DBIx::Class::Exception->throw("config does not exist at $config_file")
-    unless -e $config_file;
+    unless -e "$config_file";
 
   my $config = Config::Any::JSON->load($config_file);
 
@@ -747,27 +740,27 @@ sub load_config_file {
     DBIx::Class::Exception->throw(
       'includes params of config must be an array ref of hashrefs'
     ) unless ref $incs eq 'ARRAY';
-    
+
     foreach my $include_config (@$incs) {
       DBIx::Class::Exception->throw(
         'includes params of config must be an array ref of hashrefs'
       ) unless (ref $include_config eq 'HASH') && $include_config->{file};
-      
+
       my $include_file = $self->config_dir->file($include_config->{file});
 
       DBIx::Class::Exception->throw("config does not exist at $include_file")
-        unless -e $include_file;
-      
+        unless -e "$include_file";
+
       my $include = Config::Any::JSON->load($include_file);
       $self->msg($include);
       $config = merge( $config, $include );
     }
     delete $config->{includes};
   }
-  
+
   # validate config
   return DBIx::Class::Exception->throw('config has no sets')
-    unless $config && $config->{sets} && 
+    unless $config && $config->{sets} &&
            ref $config->{sets} eq 'ARRAY' && scalar @{$config->{sets}};
 
   $config->{might_have} = { fetch => 0 } unless exists $config->{might_have};
@@ -784,9 +777,9 @@ sub dump_rs {
         $self->dump_object($row, $params);
     }
 }
- 
+
 sub dump_object {
-  my ($self, $object, $params) = @_;  
+  my ($self, $object, $params) = @_;
   my $set = $params->{set};
 
   my $v = Data::Visitor::Callback->new(
@@ -811,21 +804,21 @@ sub dump_object {
         },
         catfile => sub {
           my ($self, @args) = @_;
-          catfile(@args);
+          "".io->catfile(@args);
         },
         catdir => sub {
           my ($self, @args) = @_;
-          catdir(@args);
+          "".io->catdir(@args);
         },
       };
 
-      my $subsre = join( '|', keys %$subs ); 
+      my $subsre = join( '|', keys %$subs );
       $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg;
 
       return $_;
     }
   );
-  
+
   $v->visit( $set );
 
   die 'no dir passed to dump_object' unless $params->{set_dir};
@@ -834,7 +827,7 @@ sub dump_object {
   my @inherited_attrs = @{$self->_inherited_attributes};
 
   my @pk_vals = map {
-    $object->get_column($_) 
+    $object->get_column($_)
   } $object->primary_columns;
 
   my $key = join("\0", @pk_vals);
@@ -844,17 +837,17 @@ sub dump_object {
 
 
   # write dir and gen filename
-  my $source_dir = $params->{set_dir}->subdir($self->_name_for_source($src));
+  my $source_dir = io->catdir($params->{set_dir}, $self->_name_for_source($src));
   $source_dir->mkpath(0, 0777);
 
-  # strip dir separators from file name
-  my $file = $source_dir->file(
-      join('-', map { s|[/\\]|_|g; $_; } @pk_vals) . '.fix'
+  # Convert characters not allowed on windows
+  my $file = io->catfile("$source_dir",
+      join('-', map { s|[/\\:\*\|\?"<>]|_|g; $_; } @pk_vals) . '.fix'
   );
 
   # write file
   unless ($exists) {
-    $self->msg('-- dumping ' . $file->stringify, 2);
+    $self->msg('-- dumping ' . "$file", 2);
     my %ds = $object->get_columns;
 
     if($set->{external}) {
@@ -905,7 +898,7 @@ sub dump_object {
 
     # do the actual dumping
     my $serialized = Dump(\%ds)->Out();
-    $file->openw->print($serialized);
+    $file->print($serialized);
   }
 
   # don't bother looking at rels unless we are actually planning to dump at least one type
@@ -926,19 +919,19 @@ sub dump_object {
       # if belongs_to or might_have with might_have param set or has_many with
       # has_many param set then
       if (
-            ( $info->{attrs}{accessor} eq 'single' && 
-              (!$info->{attrs}{join_type} || $might_have) 
+            ( $info->{attrs}{accessor} eq 'single' &&
+              (!$info->{attrs}{join_type} || $might_have)
             )
-         || $info->{attrs}{accessor} eq 'filter' 
-         || 
+         || $info->{attrs}{accessor} eq 'filter'
+         ||
             ($info->{attrs}{accessor} eq 'multi' && $has_many)
       ) {
-        my $related_rs = $object->related_resultset($name);	  
+        my $related_rs = $object->related_resultset($name);
         my $rule = $set->{rules}->{$related_rs->result_source->source_name};
         # these parts of the rule only apply to has_many rels
-        if ($rule && $info->{attrs}{accessor} eq 'multi') {		  
+        if ($rule && $info->{attrs}{accessor} eq 'multi') {
           $related_rs = $related_rs->search(
-            $rule->{cond}, 
+            $rule->{cond},
             { join => $rule->{join} }
           ) if ($rule->{cond});
 
@@ -948,23 +941,23 @@ sub dump_object {
           ) if ($rule->{quantity} && $rule->{quantity} ne 'all');
 
           $related_rs = $related_rs->search(
-            {}, 
+            {},
             { order_by => $rule->{order_by} }
-          ) if ($rule->{order_by});		  
+          ) if ($rule->{order_by});
 
         }
-        if ($set->{has_many}{quantity} && 
+        if ($set->{has_many}{quantity} &&
             $set->{has_many}{quantity} =~ /^\d+$/) {
           $related_rs = $related_rs->search(
-            {}, 
+            {},
             { rows => $set->{has_many}->{quantity} }
           );
         }
 
         my %c_params = %{$params};
         # inherit date param
-        my %mock_set = map { 
-          $_ => $set->{$_} 
+        my %mock_set = map {
+          $_ => $set->{$_}
         } grep { $set->{$_} } @inherited_attrs;
 
         $c_params{set} = \%mock_set;
@@ -972,14 +965,14 @@ sub dump_object {
           if $rule && $rule->{fetch};
 
         $self->dump_rs($related_rs, \%c_params);
-      }	
+      }
     }
   }
-  
+
   return unless $set && $set->{fetch};
   foreach my $fetch (@{$set->{fetch}}) {
     # inherit date param
-    $fetch->{$_} = $set->{$_} foreach 
+    $fetch->{$_} = $set->{$_} foreach
       grep { !$fetch->{$_} && $set->{$_} } @inherited_attrs;
     my $related_rs = $object->related_resultset($fetch->{rel});
     my $rule = $set->{rules}->{$related_rs->result_source->source_name};
@@ -991,22 +984,22 @@ sub dump_object {
       } elsif ($rule->{fetch}) {
         $fetch = merge( $fetch, { fetch => $rule->{fetch} } );
       }
-    } 
+    }
 
-    die "relationship $fetch->{rel} does not exist for " . $src->source_name 
+    die "relationship $fetch->{rel} does not exist for " . $src->source_name
       unless ($related_rs);
 
     if ($fetch->{cond} and ref $fetch->{cond} eq 'HASH') {
       # if value starts with \ assume it's meant to be passed as a scalar ref
       # to dbic.  ideally this would substitute deeply
-      $fetch->{cond} = { map { 
-          $_ => ($fetch->{cond}->{$_} =~ s/^\\//) ? \$fetch->{cond}->{$_} 
-                                                  : $fetch->{cond}->{$_} 
+      $fetch->{cond} = { map {
+          $_ => ($fetch->{cond}->{$_} =~ s/^\\//) ? \$fetch->{cond}->{$_}
+                                                  : $fetch->{cond}->{$_}
       } keys %{$fetch->{cond}} };
     }
 
     $related_rs = $related_rs->search(
-      $fetch->{cond}, 
+      $fetch->{cond},
       { join => $fetch->{join} }
     ) if $fetch->{cond};
 
@@ -1015,7 +1008,7 @@ sub dump_object {
       { rows => $fetch->{quantity} }
     ) if $fetch->{quantity} && $fetch->{quantity} ne 'all';
     $related_rs = $related_rs->search(
-      {}, 
+      {},
       { order_by => $fetch->{order_by} }
     ) if $fetch->{order_by};
 
@@ -1054,8 +1047,8 @@ sub _generate_schema {
   $pre_schema->storage->txn_do(sub {
     $pre_schema->storage->with_deferred_fk_checks(sub {
       foreach my $table (@tables) {
-        eval { 
-          $dbh->do("drop table $table" . ($params->{cascade} ? ' cascade' : '') ) 
+        eval {
+          $dbh->do("drop table $table" . ($params->{cascade} ? ' cascade' : '') )
         };
       }
     });
@@ -1107,7 +1100,7 @@ example:
       configs => [qw/one.json other.json/],
       directory_template => sub {
         my ($fixture, $params, $set) = @_;
-        return File::Spec->catdir('var', 'fixtures', $params->{schema}->version, $set);
+        return io->catdir('var', 'fixtures', $params->{schema}->version, $set);
       },
     });
 
@@ -1150,7 +1143,7 @@ example:
       schema => $schema,
       directory_template => sub {
         my ($fixture, $params, $set) = @_;
-        return File::Spec->catdir('var', 'fixtures', $params->{schema}->version, $set);
+        return io->catdir('var', 'fixtures', $params->{schema}->version, $set);
       },
     });
 
@@ -1176,13 +1169,13 @@ sub dump_all_config_sets {
 
  $fixtures->populate( {
    # directory to look for fixtures in, as specified to dump
-   directory => '/home/me/app/fixtures', 
+   directory => '/home/me/app/fixtures',
 
    # DDL to deploy
-   ddl => '/home/me/app/sql/ddl.sql', 
+   ddl => '/home/me/app/sql/ddl.sql',
 
    # database to clear, deploy and then populate
-   connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'], 
+   connection_details => ['dbi:mysql:dbname=app_dev', 'me', 'password'],
 
    # DDL to deploy after populating records, ie. FK constraints
    post_ddl => '/home/me/app/sql/post_ddl.sql',
@@ -1190,7 +1183,7 @@ sub dump_all_config_sets {
    # use CASCADE option when dropping tables
    cascade => 1,
 
-   # optional, set to 1 to run ddl but not populate 
+   # optional, set to 1 to run ddl but not populate
    no_populate => 0,
 
    # optional, set to 1 to run each fixture through ->create rather than have
@@ -1225,7 +1218,7 @@ If your tables have foreign key constraints you may want to use the cascade
 attribute which will make the drop table functionality cascade, ie 'DROP TABLE
 $table CASCADE'.
 
-C<directory> is a required attribute. 
+C<directory> is a required attribute.
 
 If you wish for DBIx::Class::Fixtures to clear the database for you pass in
 C<dll> (path to a DDL sql file) and C<connection_details> (array ref  of DSN,
@@ -1246,23 +1239,23 @@ sub populate {
   DBIx::Class::Exception->throw('directory param not specified')
     unless $params->{directory};
 
-  my $fixture_dir = dir(delete $params->{directory});
+  my $fixture_dir = io->dir(delete $params->{directory});
   DBIx::Class::Exception->throw("fixture directory '$fixture_dir' does not exist")
-    unless -d $fixture_dir;
+    unless -d "$fixture_dir";
 
   my $ddl_file;
   my $dbh;
   my $schema;
   if ($params->{ddl} && $params->{connection_details}) {
-    $ddl_file = file(delete $params->{ddl});
-    unless (-e $ddl_file) {
+    $ddl_file = io->file(delete $params->{ddl});
+    unless (-e "$ddl_file") {
       return DBIx::Class::Exception->throw('DDL does not exist at ' . $ddl_file);
     }
     unless (ref $params->{connection_details} eq 'ARRAY') {
       return DBIx::Class::Exception->throw('connection details must be an arrayref');
     }
-    $schema = $self->_generate_schema({ 
-      ddl => $ddl_file, 
+    $schema = $self->_generate_schema({
+      ddl => "$ddl_file",
       connection_details => delete $params->{connection_details},
       %{$params}
     });
@@ -1273,13 +1266,12 @@ sub populate {
   }
 
 
-  return 1 if $params->{no_populate}; 
-  
+  return 1 if $params->{no_populate};
+
   $self->msg("\nimporting fixtures");
-  my $tmp_fixture_dir = tempdir();
-  my $version_file = file($fixture_dir, '_dumper_version');
-  my $config_set_path = file($fixture_dir, '_config_set');
-  my $config_set = -e $config_set_path ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
+  my $tmp_fixture_dir = io->dir(tempdir());
+  my $config_set_path = io->file($fixture_dir, '_config_set');
+  my $config_set = -e "$config_set_path" ? do { my $VAR1; eval($config_set_path->slurp); $VAR1 } : '';
 
   my $v = Data::Visitor::Callback->new(
     plain_value => sub {
@@ -1303,21 +1295,21 @@ sub populate {
         },
         catfile => sub {
           my ($self, @args) = @_;
-          catfile(@args);
+          io->catfile(@args);
         },
         catdir => sub {
           my ($self, @args) = @_;
-          catdir(@args);
+          io->catdir(@args);
         },
       };
 
-      my $subsre = join( '|', keys %$subs ); 
+      my $subsre = join( '|', keys %$subs );
       $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg;
 
       return $_;
     }
   );
-  
+
   $v->visit( $config_set );
 
 
@@ -1327,22 +1319,19 @@ sub populate {
       @{$config_set->{sets}}
   }
 
-#  DBIx::Class::Exception->throw('no version file found');
-#    unless -e $version_file;
-
-  if (-e $tmp_fixture_dir) {
+  if (-e "$tmp_fixture_dir") {
     $self->msg("- deleting existing temp directory $tmp_fixture_dir");
     $tmp_fixture_dir->rmtree;
   }
   $self->msg("- creating temp dir");
   $tmp_fixture_dir->mkpath();
   for ( map { $self->_name_for_source($schema->source($_)) } $schema->sources) {
-    my $from_dir = $fixture_dir->subdir($_);
-    next unless -e $from_dir;
-    dircopy($from_dir, $tmp_fixture_dir->subdir($_) );
+    my $from_dir = io->catdir($fixture_dir, $_);
+    next unless -e "$from_dir";
+    $from_dir->copy( io->catdir($tmp_fixture_dir, $_)."" );
   }
 
-  unless (-d $tmp_fixture_dir) {
+  unless (-d "$tmp_fixture_dir") {
     DBIx::Class::Exception->throw("Unable to create temporary fixtures dir: $tmp_fixture_dir: $!");
   }
 
@@ -1359,7 +1348,7 @@ sub populate {
         $formatter->format_datetime(DateTime->today->add_duration($_))
       };
     }
-    $callbacks{object} ||= "visit_ref";	
+    $callbacks{object} ||= "visit_ref";
     $fixup_visitor = new Data::Visitor::Callback(%callbacks);
   }
 
@@ -1368,8 +1357,8 @@ sub populate {
       foreach my $source (sort $schema->sources) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
-        my $source_dir = $tmp_fixture_dir->subdir( $self->_name_for_source($rs->result_source) );
-        next unless (-e $source_dir);
+        my $source_dir = io->catdir($tmp_fixture_dir, $self->_name_for_source($rs->result_source));
+        next unless (-e "$source_dir");
         my @rows;
         while (my $file = $source_dir->next) {
           next unless ($file =~ /\.fix$/);
