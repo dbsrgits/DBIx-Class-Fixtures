@@ -602,7 +602,7 @@ sub dump {
       do {
         #read config
         my $config_file = io->catfile($self->config_dir, $params->{config});
-        $self->load_config_file($config_file);
+        $self->load_config_file("$config_file");
       };
   } elsif ($params->{all}) {
     my %excludes = map {$_=>1} @{$params->{excludes}||[]};
@@ -628,7 +628,7 @@ sub dump {
   }
 
   $self->msg("generating  fixtures");
-  my $tmp_output_dir = io->dir(tempdir);;
+  my $tmp_output_dir = io->dir(tempdir);
 
   if (-e "$tmp_output_dir") {
     $self->msg("- clearing existing $tmp_output_dir");
@@ -804,11 +804,11 @@ sub dump_object {
         },
         catfile => sub {
           my ($self, @args) = @_;
-          io->catfile(@args);
+          "".io->catfile(@args);
         },
         catdir => sub {
           my ($self, @args) = @_;
-          io->catdir(@args);
+          "".io->catdir(@args);
         },
       };
 
@@ -1255,7 +1255,7 @@ sub populate {
       return DBIx::Class::Exception->throw('connection details must be an arrayref');
     }
     $schema = $self->_generate_schema({
-      ddl => $ddl_file,
+      ddl => "$ddl_file",
       connection_details => delete $params->{connection_details},
       %{$params}
     });
