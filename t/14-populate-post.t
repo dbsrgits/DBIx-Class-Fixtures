@@ -6,10 +6,11 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use IO::All;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
-my $config_dir = 't/var/configs';
+my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ 
@@ -20,15 +21,15 @@ ok(my $fixtures = DBIx::Class::Fixtures->new({
 ok($fixtures->dump({ 
       config => "simple.json",
       schema => $schema,
-      directory => 't/var/fixtures' 
+      directory => io->catfile(qw't var fixtures' )->name
    }),
    "simple dump executed okay");
 
 $fixtures->populate({ 
-      ddl => 't/lib/sqlite.sql', 
-      connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''], 
-      directory => 't/var/fixtures', 
-      post_ddl => 't/lib/post_sqlite.sql' 
+      ddl => io->catfile(qw't lib sqlite.sql')->name,
+      connection_details => ['dbi:SQLite:'.io->catfile(qw't var DBIxClass.db')->name, '', ''], 
+      directory => io->catfile(qw't var fixtures')->name, 
+      post_ddl => io->catfile(qw't lib post_sqlite.sql')->name
 });
   
 $schema = DBICTest->init_schema(no_deploy => 1);

@@ -6,18 +6,19 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use IO::All;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
 
-my $config_dir = 't/var/configs';
+my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-ok($fixtures->dump({ config => 'rules.json', schema => $schema, directory => 't/var/fixtures' }), 'fetch dump executed okay');
+ok($fixtures->dump({ config => 'rules.json', schema => $schema, directory => io->catfile(qw't var fixtures')->name }), 'fetch dump executed okay');
 
 # check dump is okay
-my $dir = dir('t/var/fixtures');
+my $dir = dir(io->catfile(qw't var fixtures')->name);
 my $cd_dir = dir($dir, 'CD');
 my $track_dir = dir($dir, 'track');
 

@@ -6,23 +6,24 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use IO::All;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
 
-my $config_dir = 't/var/configs';
+my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-ok($fixtures->dump({ config => 'multiple-has-many.json', schema => $schema, directory => 't/var/fixtures' }), 'fetch dump executed okay');
+ok($fixtures->dump({ config => 'multiple-has-many.json', schema => $schema, directory => io->catfile(qw't var fixtures')->name }), 'fetch dump executed okay');
 
 # check dump is okay
-my $dir = dir('t/var/fixtures');
+my $dir = dir(io->catfile(qw't var fixtures')->name);
 
-ok( -e 't/var/fixtures/producer', "We fetched some producers" );
-ok( -e 't/var/fixtures/cd_to_producer', "We fetched some cd/producer xrefs" );
-ok( -e 't/var/fixtures/CD', "We fetched some cds" );
-ok( -e 't/var/fixtures/artist', "We fetched some artists" );
+ok( -e io->catfile(qw't var fixtures producer')->name, "We fetched some producers" );
+ok( -e io->catfile(qw't var fixtures cd_to_producer')->name, "We fetched some cd producer xrefs" );
+ok( -e io->catfile(qw't var fixtures CD')->name, "We fetched some cds" );
+ok( -e io->catfile(qw't var fixtures artist')->name, "We fetched some artists" );
 
 __END__
 while ( my ($dirname, $sourcename) = each %dirs ) {

@@ -6,15 +6,16 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper; 
 use File::Spec;
+use IO::All;
 
-ok my $config_dir = 't/var/configs';
+ok my $config_dir = io->catfile(qw't var configs')->name;
 ok my $schema = DBICTest->init_schema(), 'got schema';
 ok my $fixtures = DBIx::Class::Fixtures->new({config_dir => $config_dir}),
   'object created with correct config dir';
   
 
 my $ret = $fixtures->dump_config_sets({
-  configs => [qw/date.json rules.json/],
+  configs => [qw[ date.json rules.json ]],
   schema => $schema,
   directory_template => sub {
       my ($fixture, $params, $set) = @_;
@@ -22,10 +23,10 @@ my $ret = $fixtures->dump_config_sets({
   },
 });
 
-ok -e 't/var/fixtures/multi/date.json/artist',
+ok -e io->catfile(qw't var fixtures multi date.json artist')->name,
   'artist directory created';
 
-my $dir = dir('t/var/fixtures/multi/date.json/artist');
+my $dir = dir(io->catfile(qw't var fixtures multi date.json artist')->name);
 my @children = $dir->children;
 is(scalar(@children), 1, 'right number of fixtures created');
 

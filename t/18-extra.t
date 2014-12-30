@@ -4,11 +4,12 @@ use File::Path 'rmtree';
 
 use lib qw(t/lib);
 use ExtraTest::Schema;
+use IO::All;
 
 (my $schema = ExtraTest::Schema->connect(
   'DBI:SQLite::memory:','',''))->init_schema;
 
-open(my $fh, '<', 't/18-extra.t') ||
+open(my $fh, '<', io->catfile(qw't 18-extra.t')->name) ||
   die "Can't open the filehandle, test is trash!";
 
 ok my $row = $schema
@@ -22,15 +23,15 @@ close($fh);
 
 my $fixtures = DBIx::Class::Fixtures
   ->new({
-    config_dir => 't/var/configs',
-    config_attrs => { photo_dir => './t/var/files' },
+    config_dir => io->catfile(qw't var configs')->name,
+    config_attrs => { photo_dir => io->catfile(qw't var files')->name },
     debug => 0 });
 
 ok(
   $fixtures->dump({
     config => 'extra.json',
     schema => $schema,
-    directory => "t/var/fixtures/photos" }),
+    directory => io->catfile(qw"t var fixtures photos")->name }),
   'fetch dump executed okay');
 
 ok my $key = $schema->resultset('Photo')->first->file;
@@ -45,7 +46,7 @@ ok(
   $fixtures->populate({
     no_deploy => 1,
     schema => $schema,
-    directory => "t/var/fixtures/photos"}),
+    directory => io->catfile(qw"t var fixtures photos")->name}),
   'populated');
 
 is $key, $schema->resultset('Photo')->first->file,
@@ -56,6 +57,6 @@ ok -e $key, 'File Restored';
 done_testing;
 
 END {
-    rmtree 't/var/files';
-    rmtree 't/var/fixtures/photos';
+    rmtree io->catfile(qw't var files')->name;
+    rmtree io->catfile(qw't var fixtures photos')->name;
 }

@@ -16,12 +16,12 @@ plan tests => 5;
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema( dsn => $ENV{FIXTURETEST_DSN}, user => $ENV{FIXTURETEST_USER}, pass => $ENV{FIXTURETEST_PASS}), 'got schema');
 
-my $config_dir = 't/var/configs';
+my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-ok($fixtures->dump({ config => 'date.json', schema => $schema, directory => 't/var/fixtures' }), 'date dump executed okay');
-ok($fixtures->populate({ ddl => DBICTest->get_ddl_file($schema), connection_details => [$ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_USER} || '', $ENV{FIXTURETEST_PASS} || ''], directory => 't/var/fixtures' }), 'date populate okay');
+ok($fixtures->dump({ config => 'date.json', schema => $schema, directory => io->catfile(qw't var fixtures')->name }), 'date dump executed okay');
+ok($fixtures->populate({ ddl => DBICTest->get_ddl_file($schema), connection_details => [$ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_USER} || '', $ENV{FIXTURETEST_PASS} || ''], directory => io->catfile(qw't var fixtures')->name }), 'date populate okay');
 
 my $track = $schema->resultset('Track')->find(9);
 my $now = DateTime->now();

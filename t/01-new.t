@@ -2,9 +2,10 @@
 
 use DBIx::Class::Fixtures;
 use Test::More tests => 3;
+use IO::All;
 
-my $config_dir = 't/var/configs';
-my $imaginary_config_dir = 't/var/not_there';
+my $config_dir = io->catfile(qw't var configs')->name;
+my $imaginary_config_dir = io->catfile(qw't var not_there')->name;
 
 eval {
   DBIx::Class::Fixtures->new({ });

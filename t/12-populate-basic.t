@@ -6,10 +6,11 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use IO::All;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
-my $config_dir = 't/var/configs';
+my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ 
@@ -25,18 +26,18 @@ foreach my $set ('simple', 'quantity', 'fetch', 'rules') {
   ok($fixtures->dump({ 
       config => "$set.json", 
       schema => $schema, 
-      directory => 't/var/fixtures' 
+      directory => io->catfile(qw't var fixtures')->name 
     }), "$set dump executed okay"
   );
   $fixtures->populate({ 
-    ddl => 't/lib/sqlite.sql', 
-    connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''], 
-    directory => 't/var/fixtures'
+    ddl => io->catfile(qw[t lib sqlite.sql])->name,
+    connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''], 
+    directory => io->catfile(qw't var fixtures')->name
   });
 
   $schema = DBICTest->init_schema( no_deploy => 1);
 
-  my $fixture_dir = dir('t/var/fixtures');
+  my $fixture_dir = dir(io->catfile(qw't var fixtures')->name);
   foreach my $class ($schema->sources) {
     my $source_dir = dir($fixture_dir, lc($class));
     is($schema->resultset($class)->count, 
@@ -68,13 +69,13 @@ $fixtures = DBIx::Class::Fixtures->new({
 ok( $fixtures->dump({
 		config => "use_create.json",
 		schema => $schema,
-		directory => 't/var/fixtures'
+		directory => io->catfile(qw't var fixtures')->name
 	}), "use_create dump executed okay"
 );
 $schema = DBICTest->init_schema( no_populate => 1 );
 $fixtures->populate({
-	directory => 't/var/fixtures',
-	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''], 
+	directory => io->catfile(qw't var fixtures')->name,
+	connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''], 
 	schema => $schema,
 	no_deploy => 1,
 	use_create => 1
@@ -84,16 +85,16 @@ is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", 
 
 $schema = DBICTest->init_schema( no_populate => 1 );
 $fixtures->populate({
-	directory => 't/var/fixtures',
-	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''],
+	directory => io->catfile(qw't var fixtures')->name,
+	connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''], 
 	schema => $schema,
 	no_deploy => 1,
 	use_find_or_create => 1
 });
 is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "use_find_or_create => 1 ok" );
 $fixtures->populate({
-	directory => 't/var/fixtures',
-	connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''],
+	directory => io->catfile(qw't var fixtures')->name,
+	connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''], 
 	schema => $schema,
 	no_deploy => 1,
 	use_find_or_create => 1

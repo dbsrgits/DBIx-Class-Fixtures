@@ -8,12 +8,14 @@ use Path::Class;
 use Data::Dumper;
 use DBICTest::Schema2;
 
+use IO::All;
+
 # set up and populate normal schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
-my $config_dir = 't/var/configs';
-
+my $config_dir = io->catfile(qw't var configs')->name;
+my $dbix_class_different = io->catfile(qw[ t var DBIxClassDifferent.db ])->name;
 my @different_connection_details = (
-    'dbi:SQLite:t/var/DBIxClassDifferent.db', 
+    "dbi:SQLite:$dbix_class_different",
     '', 
     ''
 )
@@ -23,9 +25,9 @@ my $schema2 = DBICTest::Schema2->compose_namespace('DBICTest2')
 
 ok $schema2;
 
-unlink('t/var/DBIxClassDifferent.db') if (-e 't/var/DBIxClassDifferent.db');
+unlink($dbix_class_different) if (-e $dbix_class_different );
 
-DBICTest->deploy_schema($schema2, 't/lib/sqlite_different.sql');
+DBICTest->deploy_schema($schema2, 't lib sqlite_different.sql');
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ 
@@ -37,21 +39,21 @@ ok(my $fixtures = DBIx::Class::Fixtures->new({
 ok($fixtures->dump({ 
       config => "simple.json", 
       schema => $schema, 
-      directory => 't/var/fixtures' 
+      directory => io->catfile(qw't var fixtures')->name 
     }), 
     "simple dump executed okay");
 
 ok($fixtures->populate({ 
-      ddl => 't/lib/sqlite_different.sql', 
+      ddl => io->catfile(qw[t lib sqlite_different.sql])->name,
       connection_details => [@different_connection_details], 
-      directory => 't/var/fixtures'
+      directory => io->catfile(qw't var fixtures')->name
     }),
     'mysql populate okay');
 
 ok($fixtures->populate({ 
-      ddl => 't/lib/sqlite.sql', 
-      connection_details => ['dbi:SQLite:t/var/DBIxClass.db', '', ''],
-      directory => 't/var/fixtures'
+      ddl => io->catfile(qw[ t lib sqlite.sql ])->name,
+      connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''],
+      directory => io->catfile(qw't var fixtures')->name
     }), 
     'sqlite populate okay');
 

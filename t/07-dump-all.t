@@ -6,14 +6,14 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper; 
-
+use IO::All;
 plan tests => 16;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema( ), 'got schema');
 
-my $config_dir = 't/var/configs';
-my $fixture_dir = 't/var/fixtures';
+my $config_dir = io->catfile(qw't var configs')->name;
+my $fixture_dir = io->catfile(qw't var fixtures')->name;
 
 # do dump
 {
@@ -31,12 +31,22 @@ my $fixture_dir = 't/var/fixtures';
 # do dump with excludes
 {
     ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-    ok($fixtures->dump({ all => 1, schema => $schema, excludes => ['Tag'], directory => "$fixture_dir/excludes" }), 'fetch dump executed okay');
+    ok(
+        $fixtures->dump(
+            {
+                all       => 1,
+                schema    => $schema,
+                excludes  => ['Tag'],
+                directory => io->catfile( $fixture_dir, 'excludes' )->name
+            }
+        ),
+        'fetch dump executed okay'
+    );
 
     foreach my $source ($schema->sources) {
             my $rs = $schema->resultset($source);
             next if $rs->result_source->from eq 'tags';
-            my $dir =  dir("$fixture_dir/excludes", ref $rs->result_source->name ? $rs->result_source->source_name : $rs->result_source->name);
+            my $dir =  dir(io->catfile($fixture_dir,"excludes")->name, ref $rs->result_source->name ? $rs->result_source->source_name : $rs->result_source->name);
             my @children = $dir->children;
             is (scalar(@children), $rs->count, 'all objects from $source dumped');
     }
