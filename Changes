@@ -2,7 +2,7 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
-- Tests look good ( except still busted on windows ), releasing as stable
+- changed tests to use portable directory management
 
 1.001027_01 2014-12-26 17:06:08+00:00 Europe/London
 
