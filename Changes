@@ -2,6 +2,8 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+1.001027_02 2014-12-30 19:50:50+00:00 Europe/London
+
 - changed tests to use portable directory management
 
 1.001027_01 2014-12-26 17:06:08+00:00 Europe/London
