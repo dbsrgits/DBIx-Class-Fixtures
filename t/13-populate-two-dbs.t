@@ -7,7 +7,7 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper;
 use DBICTest::Schema2;
-
+use Devel::Confess;
 use IO::All;
 
 # set up and populate normal schema
@@ -27,7 +27,7 @@ ok $schema2;
 
 unlink($dbix_class_different) if (-e $dbix_class_different );
 
-DBICTest->deploy_schema($schema2, 't lib sqlite_different.sql');
+DBICTest->deploy_schema($schema2, io->catfile(qw't lib sqlite_different.sql')->name);
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ 

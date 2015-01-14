@@ -97,10 +97,9 @@ sub deploy_schema {
     my $schema = shift;
 
     my $file = shift || $self->get_ddl_file($schema);
-    open IN, $file;
+    open(  my $fh, "<",$file ) or die "couldnt open $file, $!";
     my $sql;
-    { local $/ = undef; $sql = <IN>; }
-    close IN;
+    { local $/ = undef; $sql = <$fh>; }
 
     foreach my $line (split(/;\n/, $sql)) {
       print "$line\n";

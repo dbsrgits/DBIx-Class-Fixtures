@@ -14,6 +14,7 @@ my %WriteMakefileArgs = (
   "AUTHOR" => "Luke Saunders <luke\@shadowcatsystems.co.uk>",
   "BUILD_REQUIRES" => {
     "DBIx::Class::InflateColumn::FS" => "0.01007",
+    "Devel::Confess" => 0,
     "ExtUtils::MakeMaker" => "6.59",
     "Test::More" => "0.98"
   },
@@ -51,7 +52,7 @@ my %WriteMakefileArgs = (
     "IPC::Open3" => 0,
     "Test::More" => "0.98"
   },
-  "VERSION" => "1.001028",
+  "VERSION" => "1.001_029",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -70,6 +71,7 @@ my %FallbackPrereqs = (
   "DateTime::Format::MySQL" => 0,
   "DateTime::Format::Pg" => 0,
   "DateTime::Format::SQLite" => "0.1",
+  "Devel::Confess" => 0,
   "ExtUtils::MakeMaker" => "6.59",
   "File::Copy::Recursive" => "0.38",
   "File::Spec" => 0,
