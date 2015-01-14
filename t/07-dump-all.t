@@ -7,6 +7,7 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper; 
 use IO::All;
+use if $^O eq 'MSWin32','Devel::Confess';
 plan tests => 16;
 
 # set up and populate schema

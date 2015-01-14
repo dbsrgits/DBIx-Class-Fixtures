@@ -5,9 +5,10 @@ use Test::More tests => 17;
 use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
-use Data::Dumper; 
+use Data::Dumper;
 use IO::All;
 
+use if $^O eq 'MSWin32','Devel::Confess';
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema(), 'got schema');
 
