@@ -17,7 +17,7 @@ matrix:
 
 install:
     - cpanm --no-skip-satisfied -n Class::Method::Modifiers YAML::XS
-    - cpanm -n Dist:Zilla DBD::mysql DBD::Pg
+    - cpanm -n Dist::Zilla DBD::mysql DBD::Pg
     - dzil authordeps --missing | cpanm  --no-skip-satisfied -n || { cat ~/.cpanm/build.log ; false ; }
     - dzil listdeps --author --missing | cpanm --no-skip-satisfied -n || { cat ~/.cpanm/build.log ; false ; }
 
