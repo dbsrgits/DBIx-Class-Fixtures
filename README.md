@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/basbloemsaat/DBIx-Class-Fixtures.svg?branch=PRC1)](https://travis-ci.org/basbloemsaat/DBIx-Class-Fixtures)
+[![Build Status](https://travis-ci.org/dbsrgits/DBIx-Class-Fixtures.svg?branch=master)](https://travis-ci.org/dbsrgits/DBIx-Class-Fixtures)
 
 DBIx::Class::Fixtures
 =====================
