@@ -8,7 +8,7 @@ use Path::Class;
 use Data::Dumper; 
 use IO::All;
 use if $^O eq 'MSWin32','Devel::Confess';
-plan tests => 16;
+plan tests => 18;
 
 # set up and populate schema
 ok(my $schema = DBICTest->init_schema( ), 'got schema');

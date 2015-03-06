@@ -152,6 +152,11 @@ sub populate_schema {
         [ 32948, 'Big PK' ],
     ]);
 
+    $schema->populate('Artist::WashedUp', [
+        [ qw/fk_artistid/ ],
+        [ 2 ],
+    ]);
+
     $schema->populate('CD', [
         [ qw/cdid artist title year/ ],
         [ 1, 1, "Spoonful of bees", 1999 ],

@@ -1,5 +1,5 @@
 package # hide from PAUSE 
-    DBICTest::Schema::Artist;
+    DBICTest::Schema::Artist::WashedUp;
 
 use base 'DBIx::Class::Core';
 
@@ -7,7 +7,6 @@ __PACKAGE__->table('artist_washed_up');
 __PACKAGE__->add_columns(
   'fk_artistid' => {
     data_type => 'integer',
-    is_auto_increment => 1,
   },
 );
 
