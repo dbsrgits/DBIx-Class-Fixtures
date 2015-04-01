@@ -5,6 +5,8 @@ use strict;
 use warnings;
 use DBICTest::Schema;
 
+use utf8;
+
 =head1 NAME
 
 DBICTest - Library to be used by DBIx::Class test scripts.
@@ -60,7 +62,7 @@ sub init_schema {
 
     my $schema;
 
-    my @connect_info = ($dsn, $dbuser, $dbpass, { AutoCommit => 1 });
+    my @connect_info = ($dsn, $dbuser, $dbpass, { AutoCommit => 1, sqlite_unicode => 1 });
 
     if ($args{compose_connection}) {
       $schema = DBICTest::Schema->compose_connection(
@@ -158,7 +160,7 @@ sub populate_schema {
         [ 2, 1, "Forkful of bees", 2001 ],
         [ 3, 1, "Caterwaulin' Blues", 1997 ],
         [ 4, 2, "Generic Manufactured Singles", 2001 ],
-        [ 5, 2, "We like girls and stuff", 2003 ],
+        [ 5, 2, "Wir übertreiben überhaupt nicht", 2003 ],
         [ 6, 3, "Come Be Depressed With Us", 1998 ],
     ]);
 
