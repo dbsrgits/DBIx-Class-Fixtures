@@ -6,24 +6,27 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use Test::TempDir::Tiny;
 use IO::All;
 
+my $tempdir = tempdir;
+
 # set up and populate schema
-ok(my $schema = DBICTest->init_schema(), 'got schema');
+ok(my $schema = DBICTest->init_schema(db_dir => $tempdir), 'got schema');
 
 my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-ok($fixtures->dump({ config => 'multiple-has-many.json', schema => $schema, directory => io->catfile(qw't var fixtures')->name }), 'fetch dump executed okay');
+ok($fixtures->dump({ config => 'multiple-has-many.json', schema => $schema, directory => $tempdir }), 'fetch dump executed okay');
 
 # check dump is okay
-my $dir = dir(io->catfile(qw't var fixtures')->name);
+my $dir = dir($tempdir);
 
-ok( -e io->catfile(qw't var fixtures producer')->name, "We fetched some producers" );
-ok( -e io->catfile(qw't var fixtures cd_to_producer')->name, "We fetched some cd producer xrefs" );
-ok( -e io->catfile(qw't var fixtures CD')->name, "We fetched some cds" );
-ok( -e io->catfile(qw't var fixtures artist')->name, "We fetched some artists" );
+ok( -e io->catfile($tempdir, qw'producer')->name, "We fetched some producers" );
+ok( -e io->catfile($tempdir, qw'cd_to_producer')->name, "We fetched some cd producer xrefs" );
+ok( -e io->catfile($tempdir, qw'CD')->name, "We fetched some cds" );
+ok( -e io->catfile($tempdir, qw'artist')->name, "We fetched some artists" );
 
 __END__
 while ( my ($dirname, $sourcename) = each %dirs ) {

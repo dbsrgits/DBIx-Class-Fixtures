@@ -6,22 +6,25 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper;
+use Test::TempDir::Tiny;
 use IO::All;
+
+my $tempdir = tempdir;
 
 use if $^O eq 'MSWin32','Devel::Confess';
 # set up and populate schema
-ok(my $schema = DBICTest->init_schema(), 'got schema');
+ok(my $schema = DBICTest->init_schema(db_dir => $tempdir), 'got schema');
 
 my $config_dir = io->catfile(qw't var configs')->name;
 
 {
     # do dump
     ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
-    ok($fixtures->dump({ config => 'simple.json', schema => $schema, directory => io->catfile(qw't var fixtures')->name }), 'simple dump executed okay');
+    ok($fixtures->dump({ config => 'simple.json', schema => $schema, directory => $tempdir }), 'simple dump executed okay');
 
     # check dump is okay
-    my $dir = dir(io->catfile(qw't var fixtures artist')->name);
-    ok(-e io->catfile(qw't var fixtures artist')->name, 'artist directory created');
+    my $dir = dir(io->catfile($tempdir, qw'artist')->name);
+    ok(-e io->catfile($tempdir, qw'artist')->name, 'artist directory created');
 
     my @children = $dir->children;
     is(scalar(@children), 1, 'right number of fixtures created');
@@ -55,13 +58,13 @@ my $config_dir = io->catfile(qw't var configs')->name;
                 "quantity" => 1
             }]
         },
-        schema => $schema, 
-        directory => io->catfile(qw't var fixtures')->name,
+        schema => $schema,
+        directory => $tempdir,
     }), 'simple dump executed okay');
 
     # check dump is okay
-    my $dir = dir(io->catfile(qw't var fixtures artist')->name);
-    ok(-e io->catfile(qw't var fixtures artist')->name, 'artist directory created');
+    my $dir = dir(io->catfile($tempdir, qw'artist')->name);
+    ok(-e io->catfile($tempdir, qw'artist')->name, 'artist directory created');
 
     my @children = $dir->children;
     is(scalar(@children), 1, 'right number of fixtures created');

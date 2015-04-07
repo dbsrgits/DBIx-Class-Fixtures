@@ -8,12 +8,15 @@ use Path::Class;
 use Data::Dumper;
 use DBICTest::Schema2;
 use Devel::Confess;
+use Test::TempDir::Tiny;
 use IO::All;
 
+my $tempdir = tempdir;
+
 # set up and populate normal schema
-ok(my $schema = DBICTest->init_schema(), 'got schema');
+ok(my $schema = DBICTest->init_schema(db_dir => $tempdir), 'got schema');
 my $config_dir = io->catfile(qw't var configs')->name;
-my $dbix_class_different = io->catfile(qw[ t var DBIxClassDifferent.db ])->name;
+my $dbix_class_different = io->catfile($tempdir, qw[ DBIxClassDifferent.db ])->name;
 my @different_connection_details = (
     "dbi:SQLite:$dbix_class_different",
     '', 
@@ -38,24 +41,24 @@ ok(my $fixtures = DBIx::Class::Fixtures->new({
 
 ok($fixtures->dump({ 
       config => "simple.json", 
-      schema => $schema, 
-      directory => io->catfile(qw't var fixtures')->name 
+      schema => $schema,
+      directory => $tempdir 
     }), 
     "simple dump executed okay");
 
 ok($fixtures->populate({ 
       ddl => io->catfile(qw[t lib sqlite_different.sql])->name,
       connection_details => [@different_connection_details], 
-      directory => io->catfile(qw't var fixtures')->name
+      directory => $tempdir
     }),
     'mysql populate okay');
 
 ok($fixtures->populate({ 
       ddl => io->catfile(qw[ t lib sqlite.sql ])->name,
-      connection_details => ['dbi:SQLite:'.io->catfile(qw[ t var DBIxClass.db ])->name, '', ''],
-      directory => io->catfile(qw't var fixtures')->name
+      connection_details => ['dbi:SQLite:'.io->catfile($tempdir, qw[ DBIxClass.db ])->name, '', ''],
+      directory => $tempdir
     }), 
     'sqlite populate okay');
 
-$schema = DBICTest->init_schema(no_deploy => 1);
+$schema = DBICTest->init_schema(db_dir => $tempdir,no_deploy => 1);
 is($schema->resultset('Artist')->count, 1, 'artist imported to sqlite okay');

@@ -6,15 +6,18 @@ use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
 use Data::Dumper; 
+use Test::TempDir::Tiny;
 use IO::All;
+
+my $tempdir = tempdir;
 use if $^O eq 'MSWin32','Devel::Confess';
 plan tests => 16;
 
 # set up and populate schema
-ok(my $schema = DBICTest->init_schema( ), 'got schema');
+ok(my $schema = DBICTest->init_schema(db_dir => $tempdir, ), 'got schema');
 
 my $config_dir = io->catfile(qw't var configs')->name;
-my $fixture_dir = io->catfile(qw't var fixtures')->name;
+my $fixture_dir = $tempdir;
 
 # do dump
 {
