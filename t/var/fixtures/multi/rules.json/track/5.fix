@@ -1,0 +1,9 @@
+$HASH1 = {
+           cd      => 2,
+           last_updated_on
+                   => undef,
+           position
+                   => 2,
+           title   => 'Stripy',
+           trackid => 5
+         };

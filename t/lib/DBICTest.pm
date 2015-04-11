@@ -161,7 +161,7 @@ sub populate_schema {
         [ 3, 1, "Caterwaulin' Blues", 1997 ],
         [ 4, 2, "Generic Manufactured Singles", 2001 ],
         [ 5, 2, "Unicode Chars ™ © • † ∑ α β « » → …", 2015 ],
-        [ 6, 3, "Come Be Depressed With Us", 1998 ],
+        [ 6, 3, "Übertreibung älterer Umlaute", 1998 ],
     ]);
 
     $schema->populate('Tag', [

@@ -1,0 +1,19 @@
+$HASH1 = {
+           cd      => 3,
+           last_updated_on
+                   => {
+                        days     => -10,
+                        end_of_month
+                                 => 'wrap',
+                        minutes  => 0,
+                        months   => 0,
+                        nanoseconds
+                                 => 0,
+                        seconds  => 0
+                      },
+           position
+                   => 3,
+           title   => 'Fowlin',
+           trackid => 9
+         };
+bless( $HASH1->{last_updated_on}, 'DateTime::Duration' );
