@@ -160,7 +160,7 @@ sub populate_schema {
         [ 2, 1, "Forkful of bees", 2001 ],
         [ 3, 1, "Caterwaulin' Blues", 1997 ],
         [ 4, 2, "Generic Manufactured Singles", 2001 ],
-        [ 5, 2, "Wir übertreiben überhaupt nicht", 2003 ],
+        [ 5, 2, "Unicode Chars ™ © • † ∑ α β « » → …", 2015 ],
         [ 6, 3, "Come Be Depressed With Us", 1998 ],
     ]);
 
