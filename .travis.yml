@@ -1,9 +1,36 @@
- language: perl
-    perl:
-      - "5.18"
-      - "5.16"
-      - "5.14"
-      - "5.12"
-      - "5.10"
-      - "5.8"
-      - "5.6"
+language: perl
+
+perl:
+    - "blead"
+    - "5.8"
+    - "5.10"
+    - "5.12"
+    - "5.14"
+    - "5.16"
+    - "5.18"
+    - "5.20"
+
+matrix:
+    allow_failures:
+        - perl: "blead"
+        - perl: "5.8"
+
+install:
+    - cpanm --no-skip-satisfied -n Class::Method::Modifiers YAML::XS
+    - cpanm -n Dist::Zilla DBD::mysql DBD::Pg
+    - dzil authordeps --missing | cpanm  --no-skip-satisfied -n || { cat ~/.cpanm/build.log ; false ; }
+    - dzil listdeps --author --missing | cpanm --no-skip-satisfied -n || { cat ~/.cpanm/build.log ; false ; }
+
+before_script:
+    - mysql -e 'CREATE DATABASE dbix_class_fixtures_test;'
+    - psql -c 'create database dbix_class_fixtures_test;' -U postgres
+
+script:
+    - dzil test
+
+env:
+    matrix :
+        -  FIXTURETEST_DSN='dbi:mysql:dbix_class_fixtures_test:127.0.0.1:3306' FIXTURETEST_USER='root' FIXTURETEST_PASS=''
+        -  FIXTURETEST_DSN='dbi:Pg:dbname=dbix_class_fixtures_test' FIXTURETEST_USER='postgres' FIXTURETEST_PASS=''
+
+
