@@ -6,10 +6,13 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper; 
 use File::Spec;
+use Test::TempDir::Tiny;
 use IO::All;
 
+my $tempdir = tempdir;
+
 ok my $config_dir = io->catfile(qw't var configs')->name;
-ok my $schema = DBICTest->init_schema(), 'got schema';
+ok my $schema = DBICTest->init_schema(db_dir => $tempdir), 'got schema';
 ok my $fixtures = DBIx::Class::Fixtures->new({config_dir => $config_dir}),
   'object created with correct config dir';
   
@@ -19,14 +22,14 @@ my $ret = $fixtures->dump_config_sets({
   schema => $schema,
   directory_template => sub {
       my ($fixture, $params, $set) = @_;
-      File::Spec->catdir('t','var','fixtures','multi', $set);
+      File::Spec->catdir($tempdir,'multi', $set);
   },
 });
 
-ok -e io->catfile(qw't var fixtures multi date.json artist')->name,
+ok -e io->catfile($tempdir, qw'multi date.json artist')->name,
   'artist directory created';
 
-my $dir = dir(io->catfile(qw't var fixtures multi date.json artist')->name);
+my $dir = dir(io->catfile($tempdir, qw'multi date.json artist')->name);
 my @children = $dir->children;
 is(scalar(@children), 1, 'right number of fixtures created');
 

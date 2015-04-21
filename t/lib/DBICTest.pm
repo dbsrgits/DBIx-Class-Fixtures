@@ -46,7 +46,11 @@ sub init_schema {
     my $self = shift;
     my %args = @_;
 
-    my $db_file = "t/var/DBIxClass.db";
+    my $db_file
+        = $args{db_dir}
+        ? "$args{db_dir}/DBIxClass.db"
+        : "t/var/DBIxClass.db"
+        ;
 
     mkdir("t/var") unless -d "t/var";
     if ( !$args{no_deploy} ) {
