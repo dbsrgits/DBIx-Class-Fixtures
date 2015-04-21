@@ -2,3 +2,6 @@
 \.DS_Store
 .prove
 tmp/
+local/
+cpanfile
+cpanfile.snapshot
