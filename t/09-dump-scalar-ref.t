@@ -42,7 +42,7 @@ ok($fixtures->dump({ config => 'scalar_ref.json', schema => $schema, directory =
   my $fix_file = $children[0];
   my $HASH1; eval($fix_file->slurp());
 
-  is($HASH1->{title}, 'Come Be Depressed With Us', 'correct cd dumped');
+  like($HASH1->{title}, qr/with us/, 'correct cd dumped');
 }
 
 
