@@ -898,6 +898,7 @@ sub dump_object {
 
     # do the actual dumping
     my $serialized = Dump(\%ds)->Out();
+
     $file->print($serialized);
   }
 

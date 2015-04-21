@@ -2,6 +2,9 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+- use Test::TempDir::Tiny for better test parallelization and cleanup
+
+
 1.001_029 2015-01-14 15:17:28+00:00 Europe/London
 
 - fix for bugtracker pointing to gh, should be rt, added test to identify windows issues
