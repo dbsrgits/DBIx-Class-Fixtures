@@ -2,7 +2,10 @@
 
 use DBIx::Class::Fixtures;
 use Test::More tests => 3;
+use Test::TempDir::Tiny;
 use IO::All;
+
+my $tempdir = tempdir;
 
 my $config_dir = io->catfile(qw't var configs')->name;
 my $imaginary_config_dir = io->catfile(qw't var not_there')->name;
