@@ -1,0 +1,54 @@
+$VAR1 = {
+          'might_have' => {
+                            'fetch' => 0
+                          },
+          'sets' => [
+                      {
+                        'class' => 'CD',
+                        'ids' => [
+                                   '5'
+                                 ]
+                      },
+                      {
+                        'ids' => [
+                                   '1'
+                                 ],
+                        'class' => 'Artist',
+                        'fetch' => [
+                                     {
+                                       'quantity' => 'all',
+                                       'rel' => 'cds'
+                                     }
+                                   ]
+                      }
+                    ],
+          'has_many' => {
+                          'fetch' => 0
+                        },
+          'rules' => {
+                       'CD' => {
+                                 'fetch' => [
+                                              {
+                                                'cond' => {
+                                                            'position' => 2
+                                                          },
+                                                'rel' => 'tracks'
+                                              }
+                                            ],
+                                 'cond' => [
+                                             {
+                                               'tags.tag' => 'Cheesy'
+                                             }
+                                           ],
+                                 'join' => [
+                                             'tags'
+                                           ]
+                               },
+                       'might_have' => {
+                                         'fetch' => 0
+                                       }
+                     },
+          'belongs_to' => {
+                            'fetch' => 1
+                          }
+        };

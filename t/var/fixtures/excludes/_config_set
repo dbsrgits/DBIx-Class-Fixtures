@@ -1,0 +1,33 @@
+$VAR1 = {
+          'belongs_to' => {
+                            'fetch' => 0
+                          },
+          'sets' => [
+                      {
+                        'class' => 'Track',
+                        'quantity' => 'all'
+                      },
+                      {
+                        'quantity' => 'all',
+                        'class' => 'CD'
+                      },
+                      {
+                        'class' => 'Producer',
+                        'quantity' => 'all'
+                      },
+                      {
+                        'quantity' => 'all',
+                        'class' => 'CD_to_Producer'
+                      },
+                      {
+                        'class' => 'Artist',
+                        'quantity' => 'all'
+                      }
+                    ],
+          'has_many' => {
+                          'fetch' => 0
+                        },
+          'might_have' => {
+                            'fetch' => 0
+                          }
+        };

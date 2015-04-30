@@ -62,7 +62,10 @@ sub init_schema {
 
     my $schema;
 
-    my @connect_info = ($dsn, $dbuser, $dbpass, { AutoCommit => 1, sqlite_unicode => 1 });
+    use DDP;
+    p $dsn;
+
+    my @connect_info = ($dsn, $dbuser, $dbpass, { AutoCommit => 1, mysql_enable_utf8 => 1 });
 
     if ($args{compose_connection}) {
       $schema = DBICTest::Schema->compose_connection(

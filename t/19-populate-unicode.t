@@ -7,10 +7,20 @@ use DBICTest;
 use Path::Class;
 use Data::Dumper;
 use IO::All;
+use Test::mysqld;
 use utf8;
 
 # set up and populate schema
-ok( my $schema = DBICTest->init_schema(), 'got schema' );
+
+plan skip_all => 'Set $ENV{FIXTURETEST_DSN}, _USER and _PASS to point at MySQL DB to run this test'
+  unless ($ENV{FIXTURETEST_DSN});
+
+ok( my $schema = DBICTest->init_schema( { dsn => $ENV{FIXTURETEST_DSN}, user => $ENV{FIXTURETEST_USER}, pass => $ENV{FIXTURETEST_PASS} } ) );
+
+
+
+#ok( my $schema = DBICTest->init_schema(), 'got schema' );
+
 my $config_dir = io->catfile(qw't var configs')->name;
 
 # do dump
@@ -23,6 +33,10 @@ ok(
     ),
     'object created with correct config dir'
 );
+
+# DBI::mysql:database=test;host=localhost;port=5624
+
+
 
 DBICTest->clear_schema($schema);
 DBICTest->populate_schema($schema);
