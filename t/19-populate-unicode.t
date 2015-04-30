@@ -51,3 +51,7 @@ $fixtures->populate(
 my $cd = $schema->resultset('CD')->find( { cdid => 5 });
 
 is($cd->title, "Unicode Chars ™ © • † ∑ α β « » → …", "Unicode chars found");
+
+my $umlaute_cd = $schema->resultset('CD')->find( { cdid => 6 } );
+
+is($umlaute_cd->title, "Übertreibung älterer Umlaute", "German special chars are correctly imported");
