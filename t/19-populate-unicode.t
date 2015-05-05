@@ -15,7 +15,7 @@ use utf8;
 plan skip_all => 'Set $ENV{FIXTURETEST_DSN}, _USER and _PASS to point at MySQL DB to run this test'
   unless ($ENV{FIXTURETEST_DSN});
 
-ok( my $schema = DBICTest->init_schema( { dsn => $ENV{FIXTURETEST_DSN}, user => $ENV{FIXTURETEST_USER}, pass => $ENV{FIXTURETEST_PASS} } ) );
+ok( my $schema = DBICTest->init_schema( dsn => $ENV{FIXTURETEST_DSN}, user => $ENV{FIXTURETEST_USER}, pass => $ENV{FIXTURETEST_PASS} ) );
 
 
 
