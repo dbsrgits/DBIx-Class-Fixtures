@@ -1,6 +1,0 @@
-$HASH1 = {
-           artist => 3,
-           cdid   => 6,
-           title  => "\303\234bertreibung \303\244lterer Umlaute",
-           year   => 1998
-         };

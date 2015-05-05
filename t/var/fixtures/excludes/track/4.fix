@@ -1,9 +1,0 @@
-$HASH1 = {
-           cd      => 2,
-           last_updated_on
-                   => undef,
-           position
-                   => 1,
-           title   => 'Stung with Success',
-           trackid => 4
-         };
