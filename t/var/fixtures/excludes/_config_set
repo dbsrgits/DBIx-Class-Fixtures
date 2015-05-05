@@ -4,23 +4,23 @@ $VAR1 = {
                           },
           'sets' => [
                       {
+                        'quantity' => 'all',
+                        'class' => 'CD_to_Producer'
+                      },
+                      {
+                        'quantity' => 'all',
+                        'class' => 'Artist'
+                      },
+                      {
                         'class' => 'Track',
                         'quantity' => 'all'
                       },
                       {
                         'quantity' => 'all',
-                        'class' => 'CD'
+                        'class' => 'Producer'
                       },
                       {
-                        'class' => 'Producer',
-                        'quantity' => 'all'
-                      },
-                      {
-                        'quantity' => 'all',
-                        'class' => 'CD_to_Producer'
-                      },
-                      {
-                        'class' => 'Artist',
+                        'class' => 'CD',
                         'quantity' => 'all'
                       }
                     ],

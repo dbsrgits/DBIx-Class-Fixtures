@@ -8,7 +8,8 @@ use Path::Class;
 use Data::Dumper;
 use IO::All;
 use Test::mysqld;
-use utf8;
+use utf8::all;
+use feature 'unicode_strings';
 
 # set up and populate schema
 

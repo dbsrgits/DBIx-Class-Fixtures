@@ -1,4 +1,11 @@
 $VAR1 = {
+          'belongs_to' => {
+                            'fetch' => 1
+                          },
+          'has_many' => {
+                          'fetch' => 0
+                        },
+          'datetime_relative' => '2007-10-30 00:00:00',
           'might_have' => {
                             'fetch' => 0
                           },
@@ -9,12 +16,5 @@ $VAR1 = {
                                  ],
                         'class' => 'Track'
                       }
-                    ],
-          'datetime_relative' => '2007-10-30 00:00:00',
-          'has_many' => {
-                          'fetch' => 0
-                        },
-          'belongs_to' => {
-                            'fetch' => 1
-                          }
+                    ]
         };
