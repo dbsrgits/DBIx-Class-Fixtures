@@ -4,7 +4,10 @@ use File::Path 'rmtree';
 
 use lib qw(t/lib);
 use ExtraTest::Schema;
+use Test::TempDir::Tiny;
 use IO::All;
+
+my $tempdir = tempdir;
 
 (my $schema = ExtraTest::Schema->connect(
   'DBI:SQLite::memory:','',''))->init_schema;
@@ -31,7 +34,7 @@ ok(
   $fixtures->dump({
     config => 'extra.json',
     schema => $schema,
-    directory => io->catfile(qw"t var fixtures photos")->name }),
+    directory => io->catfile($tempdir, qw" photos")->name }),
   'fetch dump executed okay');
 
 ok my $key = $schema->resultset('Photo')->first->file;
@@ -46,7 +49,7 @@ ok(
   $fixtures->populate({
     no_deploy => 1,
     schema => $schema,
-    directory => io->catfile(qw"t var fixtures photos")->name}),
+    directory => io->catfile($tempdir, qw" photos")->name}),
   'populated');
 
 is $key, $schema->resultset('Photo')->first->file,
@@ -58,5 +61,5 @@ done_testing;
 
 END {
     rmtree io->catfile(qw't var files')->name;
-    rmtree io->catfile(qw't var fixtures photos')->name;
+    rmtree io->catfile($tempdir, qw'photos')->name;
 }

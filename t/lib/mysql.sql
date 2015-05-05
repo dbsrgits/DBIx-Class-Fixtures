@@ -17,6 +17,13 @@ CREATE TABLE artist (
   name varchar(100)
 );
 
+--
+-- Table: artist_washed_up
+--
+DROP TABLE IF EXISTS artist_washed_up;
+CREATE TABLE artist_washed_up (
+  fk_artistid INTEGER PRIMARY KEY NOT NULL
+);
 
 --
 -- Table: cd

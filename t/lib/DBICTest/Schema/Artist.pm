@@ -22,6 +22,11 @@ __PACKAGE__->has_many(
     { order_by => 'year' },
 );
 
+__PACKAGE__->might_have(
+    washed_up => 'DBICTest::Schema::Artist::WashedUp',
+    {'foreign.fk_artistid' => 'self.artistid'},
+);
+
 sub new {
 	my ( $class, $args ) = @_;
 
