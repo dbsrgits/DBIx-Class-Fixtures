@@ -1,4 +1,7 @@
 $VAR1 = {
+          'might_have' => {
+                            'fetch' => 0
+                          },
           'belongs_to' => {
                             'fetch' => 0
                           },
@@ -8,26 +11,23 @@ $VAR1 = {
                         'class' => 'CD_to_Producer'
                       },
                       {
+                        'class' => 'Producer',
+                        'quantity' => 'all'
+                      },
+                      {
+                        'class' => 'CD',
+                        'quantity' => 'all'
+                      },
+                      {
                         'quantity' => 'all',
                         'class' => 'Artist'
                       },
                       {
                         'class' => 'Track',
                         'quantity' => 'all'
-                      },
-                      {
-                        'quantity' => 'all',
-                        'class' => 'Producer'
-                      },
-                      {
-                        'class' => 'CD',
-                        'quantity' => 'all'
                       }
                     ],
           'has_many' => {
                           'fetch' => 0
-                        },
-          'might_have' => {
-                            'fetch' => 0
-                          }
+                        }
         };
