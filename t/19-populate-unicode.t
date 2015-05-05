@@ -54,7 +54,7 @@ ok(
 
 $fixtures->populate(
     {
-        connection_details => [ 'dbi:SQLite:' . io->catfile(qw[ t var DBIxClass.db ])->name, '', '' ],
+        connection_details => [  $ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_USER}, $ENV{FIXTURETEST_PASS} ],
     	directory          => io->catfile(qw't var fixtures')->name,
         schema             => $schema,
         no_deploy          => 1,
