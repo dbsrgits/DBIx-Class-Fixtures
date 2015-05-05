@@ -17,8 +17,6 @@ plan skip_all => 'Set $ENV{FIXTURETEST_DSN}, _USER and _PASS to point at MySQL D
 
 ok( my $schema = DBICTest->init_schema( dsn => $ENV{FIXTURETEST_DSN}, user => $ENV{FIXTURETEST_USER}, pass => $ENV{FIXTURETEST_PASS} ) );
 
-
-
 #ok( my $schema = DBICTest->init_schema(), 'got schema' );
 
 my $config_dir = io->catfile(qw't var configs')->name;
@@ -51,7 +49,7 @@ ok(
     ),
     "unicode dump executed okay"
 );
-
+DBICTest->clear_schema($schema);
 $fixtures->populate(
     {
         connection_details => [  $ENV{FIXTURETEST_DSN}, $ENV{FIXTURETEST_USER}, $ENV{FIXTURETEST_PASS} ],
