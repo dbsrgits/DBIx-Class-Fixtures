@@ -62,9 +62,6 @@ sub init_schema {
 
     my $schema;
 
-    use DDP;
-    p $dsn;
-
     my @connect_info = ($dsn, $dbuser, $dbpass, { AutoCommit => 1, mysql_enable_utf8 => 1 });
 
     if ($args{compose_connection}) {
