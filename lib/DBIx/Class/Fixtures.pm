@@ -1355,7 +1355,31 @@ sub populate {
 
   $schema->storage->txn_do(sub {
     $schema->storage->with_deferred_fk_checks(sub {
-      foreach my $source (sort $schema->sources) {
+
+      use SQL::Translator;
+
+      # parse the schema with SQL::Translator
+      my $sqlt = SQL::Translator->new(
+        parser => 'SQL::Translator::Parser::DBIx::Class',
+        parser_args => {
+          dbic_schema => $schema,
+        },
+      );
+      $sqlt->translate;
+
+      # pull out the SQLT Schema, and create a hash with the correct order for tables
+      my $sqlt_schema = $sqlt->schema;
+      my %table_order = map +($_->name => $_->order - 1), $sqlt_schema->get_tables;
+
+      # create an array using the correct table order
+      my @sorted_source_names;
+      for my $source ( $schema->sources ) {
+        next unless $source; # somehow theres an undef one
+        my $table = $schema->source( $source )->name;
+        $sorted_source_names[ $table_order{ $table } ] = $source;
+      }
+
+      foreach my $source (@sorted_source_names) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
         my $source_dir = io->catdir($tmp_fixture_dir, $self->_name_for_source($rs->result_source));
