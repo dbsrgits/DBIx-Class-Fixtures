@@ -1353,9 +1353,9 @@ sub populate {
     $fixup_visitor = new Data::Visitor::Callback(%callbacks);
   }
 
+  my @sorted_source_names = $self->_get_sorted_sources( $schema );
   $schema->storage->txn_do(sub {
     $schema->storage->with_deferred_fk_checks(sub {
-      my @sorted_source_names = $self->_get_sorted_sources( $schema );
       foreach my $source (@sorted_source_names) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
