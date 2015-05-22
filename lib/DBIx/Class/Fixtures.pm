@@ -1355,30 +1355,7 @@ sub populate {
 
   $schema->storage->txn_do(sub {
     $schema->storage->with_deferred_fk_checks(sub {
-
-      use SQL::Translator;
-
-      # parse the schema with SQL::Translator
-      my $sqlt = SQL::Translator->new(
-        parser => 'SQL::Translator::Parser::DBIx::Class',
-        parser_args => {
-          dbic_schema => $schema,
-        },
-      );
-      $sqlt->translate;
-
-      # pull out the SQLT Schema, and create a hash with the correct order for tables
-      my $sqlt_schema = $sqlt->schema;
-      my %table_order = map +($_->name => $_->order - 1), $sqlt_schema->get_tables;
-
-      # create an array using the correct table order
-      my @sorted_source_names;
-      for my $source ( $schema->sources ) {
-        next unless $source; # somehow theres an undef one
-        my $table = $schema->source( $source )->name;
-        $sorted_source_names[ $table_order{ $table } ] = $source;
-      }
-
+      my @sorted_source_names = $self->_get_sorted_sources( $schema );
       foreach my $source (@sorted_source_names) {
         $self->msg("- adding " . $source);
         my $rs = $schema->resultset($source);
@@ -1445,6 +1422,93 @@ sub populate {
   $self->msg("- cleaning up");
   $tmp_fixture_dir->rmtree;
   return 1;
+}
+
+# the overall logic is modified from SQL::Translator::Parser::DBIx::Class->parse
+sub _get_sorted_sources {
+  my ( $self, $dbicschema ) = @_;
+
+
+  my %table_monikers = map { $_ => 1 } $dbicschema->sources;
+
+  my %tables;
+  foreach my $moniker (sort keys %table_monikers) {
+    my $source = $dbicschema->source($moniker);
+
+    my $table_name = $source->name;
+    my @primary = $source->primary_columns;
+    my @rels = $source->relationships();
+
+    my %created_FK_rels;
+    foreach my $rel (sort @rels) {
+      my $rel_info = $source->relationship_info($rel);
+
+      # Ignore any rel cond that isn't a straight hash
+      next unless ref $rel_info->{cond} eq 'HASH';
+
+      my @keys = map {$rel_info->{cond}->{$_} =~ /^\w+\.(\w+)$/} keys(%{$rel_info->{cond}});
+
+      # determine if this relationship is a self.fk => foreign.pk (i.e. belongs_to)
+      my $fk_constraint;
+      if ( exists $rel_info->{attrs}{is_foreign_key_constraint} ) {
+        $fk_constraint = $rel_info->{attrs}{is_foreign_key_constraint};
+      } elsif ( $rel_info->{attrs}{accessor}
+          && $rel_info->{attrs}{accessor} eq 'multi' ) {
+        $fk_constraint = 0;
+      } else {
+        $fk_constraint = not $source->_compare_relationship_keys(\@keys, \@primary);
+      }
+
+      # Dont add a relation if its not constraining
+      next unless $fk_constraint;
+
+      my $rel_table = $source->related_source($rel)->source_name;
+      # Make sure we don't create the same relation twice
+      my $key_test = join("\x00", sort @keys);
+      next if $created_FK_rels{$rel_table}->{$key_test};
+
+      if (scalar(@keys)) {
+        $created_FK_rels{$rel_table}->{$key_test} = 1;
+
+        # calculate dependencies: do not consider deferrable constraints and
+        # self-references for dependency calculations
+        if (! $rel_info->{attrs}{is_deferrable} and $rel_table ne $table_name) {
+          $tables{$moniker}{$rel_table}++;
+        }
+      }
+    }
+    $tables{$moniker} = {} unless exists $tables{$moniker};
+  }
+
+  # resolve entire dep tree
+  my $dependencies = {
+    map { $_ => _resolve_deps ($_, \%tables) } (keys %tables)
+  };
+
+  # return the sorted result
+  return sort {
+    keys %{$dependencies->{$a} || {} } <=> keys %{ $dependencies->{$b} || {} }
+      ||
+    $a cmp $b
+  } (keys %tables);
+}
+
+sub _resolve_deps {
+  my ( $question, $answers, $seen ) = @_;
+  my $ret = {};
+  $seen ||= {};
+
+  my %seen = map { $_ => $seen->{$_} + 1 } ( keys %$seen );
+  $seen{$question} = 1;
+
+  for my $dep (keys %{ $answers->{$question} }) {
+    return {} if $seen->{$dep};
+    my $subdeps = _resolve_deps( $dep, $answers, \%seen );
+    ::Dwarn $subdeps if $dep eq 'downloads';
+    $ret->{$_} += $subdeps->{$_} for ( keys %$subdeps );
+    ++$ret->{$dep};
+  }
+  return $ret;
 }
 
 sub do_post_ddl {
