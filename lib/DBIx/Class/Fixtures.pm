@@ -1504,7 +1504,6 @@ sub _resolve_deps {
   for my $dep (keys %{ $answers->{$question} }) {
     return {} if $seen->{$dep};
     my $subdeps = _resolve_deps( $dep, $answers, \%seen );
-    ::Dwarn $subdeps if $dep eq 'downloads';
     $ret->{$_} += $subdeps->{$_} for ( keys %$subdeps );
     ++$ret->{$dep};
   }
