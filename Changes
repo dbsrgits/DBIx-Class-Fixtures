@@ -2,8 +2,9 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
-- use Test::TempDir::Tiny for better test parallelization and cleanup
-
+- Fix for an issue where when inserting data into a database,
+    the tables were being sorted alphabetically, rather than in dependency order. ( TBSliver++ )
+- use Test::TempDir::Tiny for better test parallelization and cleanup ( RsrchBoy++ )
 
 1.001_029 2015-01-14 15:17:28+00:00 Europe/London
 

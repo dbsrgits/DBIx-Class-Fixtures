@@ -41,7 +41,8 @@ my %WriteMakefileArgs = (
     "MIME::Base64" => 0,
     "Path::Class" => "0.32",
     "Scalar::Util" => "1.27",
-    "Test::Compile::Internal" => 0
+    "Test::Compile::Internal" => 0,
+    "Test::TempDir::Tiny" => 0
   },
   "TEST_REQUIRES" => {
     "File::Spec" => 0,
@@ -81,7 +82,8 @@ my %FallbackPrereqs = (
   "Path::Class" => "0.32",
   "Scalar::Util" => "1.27",
   "Test::Compile::Internal" => 0,
-  "Test::More" => "0.98"
+  "Test::More" => "0.98",
+  "Test::TempDir::Tiny" => 0
 );
 
 
