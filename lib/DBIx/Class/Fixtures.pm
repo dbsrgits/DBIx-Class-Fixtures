@@ -1562,6 +1562,10 @@ sub _name_for_source {
 
   Chris Akins <chris.hexx@gmail.com>
 
+  Tom Bloor <t.bloor@shadowcat.co.uk>
+
+  Samuel Kaufman <skaufman@cpan.org>
+
 =head1 LICENSE
 
   This library is free software under the same license as perl itself
