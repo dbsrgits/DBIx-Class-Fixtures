@@ -2,6 +2,8 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+1.001_030 2015-05-27 14:43:34+00:00 UTC (TRIAL RELEASE)
+
 - Fix for an issue where when inserting data into a database,
     the tables were being sorted alphabetically, rather than in dependency order. ( TBSliver++ )
 - use Test::TempDir::Tiny for better test parallelization and cleanup ( RsrchBoy++ )
