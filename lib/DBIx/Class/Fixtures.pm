@@ -1556,6 +1556,8 @@ sub _name_for_source {
 
   Matt S. Trout <mst@shadowcatsystems.co.uk>
 
+  John Napiorkowski <jjnapiork@cpan.org>
+
   Drew Taylor <taylor.andrew.j@gmail.com>
 
   Frank Switalski <fswitalski@gmail.com>
