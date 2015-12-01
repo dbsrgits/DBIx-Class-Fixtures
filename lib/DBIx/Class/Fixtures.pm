@@ -1403,13 +1403,11 @@ sub populate {
             $rs->result_source->storage->dbh_do(sub {
               my ($storage, $dbh, @cols) = @_;
               $self->msg(
-			 my $sql = "SELECT setval('${sequence}', (SELECT max("
-			 .$dbh->quote_identifier($column)
-			 .") FROM "
-			 .$dbh->quote_identifier(${table})
-			 ."));"
-			);
+			 my $sql = sprintf("SELECT setval(?, (SELECT max(%s) FROM %s));",$dbh->quote_identifier($column),$dbh->quote_identifier($table))
+		       );
               my $sth = $dbh->prepare($sql);
+                 $sth->bind_param(1,$sequence);
+
               my $rv = $sth->execute or die $sth->errstr;
               $self->msg("- $sql");
             });
