@@ -35,6 +35,7 @@ my %WriteMakefileArgs = (
     "DateTime::Format::Pg" => 0,
     "DateTime::Format::SQLite" => "0.1",
     "File::Copy::Recursive" => "0.38",
+    "File::Temp" => "0.2304",
     "Hash::Merge" => "0.1",
     "IO::All" => "0.85",
     "JSON::Syck" => "1.27",
