@@ -2,6 +2,8 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+1.00103_3 2015-12-08 16:33:56+00:00 UTC (TRIAL RELEASE)
+
 
 - RT#108017 bugfix ( hatorikibble++ )
 - added File::Temp to deps ( hatorikibble++ )
