@@ -1394,6 +1394,8 @@ sub populate {
         ## Now we need to do some db specific cleanup
         ## this probably belongs in a more isolated space.  Right now this is
         ## to just handle postgresql SERIAL types that use Sequences
+        ## Will completely ignore sequences in Oracle due to having to drop
+        ## and recreate them
 
         my $table = $rs->result_source->name;
         for my $column(my @columns =  $rs->result_source->columns) {
@@ -1402,14 +1404,18 @@ sub populate {
              $self->msg("- updating sequence $sequence");
             $rs->result_source->storage->dbh_do(sub {
               my ($storage, $dbh, @cols) = @_;
-              $self->msg(
-			 my $sql = sprintf("SELECT setval(?, (SELECT max(%s) FROM %s));",$dbh->quote_identifier($column),$dbh->quote_identifier($table))
-		       );
-              my $sth = $dbh->prepare($sql);
-                 $sth->bind_param(1,$sequence);
+              if ( $dbh->{Driver}->{Name} eq "Oracle" ) {
+                $self->msg("- Cannot change sequence values in Oracle");
+              } else {
+                $self->msg(
+         my $sql = sprintf("SELECT setval(?, (SELECT max(%s) FROM %s));",$dbh->quote_identifier($column),$dbh->quote_identifier($table))
+             );
+                my $sth = $dbh->prepare($sql);
+                   $sth->bind_param(1,$sequence);
 
-              my $rv = $sth->execute or die $sth->errstr;
-              $self->msg("- $sql");
+                my $rv = $sth->execute or die $sth->errstr;
+                $self->msg("- $sql");
+              }
             });
           }
         }
