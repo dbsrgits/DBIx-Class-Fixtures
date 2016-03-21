@@ -2,6 +2,8 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+- releasing as stable
+
 1.00103_5 2016-03-11 20:39:49+00:00 UTC (TRIAL RELEASE)
 
 - Will completely ignore sequences in Oracle due to having to drop and recreate them
