@@ -1,7 +1,7 @@
 #!perl
 
 use DBIx::Class::Fixtures;
-use Test::More tests => 6;
+use Test::More tests => 10;
 use lib qw(t/lib);
 use DBICTest;
 use Path::Class;
@@ -21,6 +21,25 @@ my $config_dir = io->catfile(qw't var configs')->name;
 ok(my $fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
 
 ok($fixtures->dump({ config => 'nulls.json', schema => $schema, directory => $tempdir }), 'simple dump executed okay');
+
+{
+  # check dump is okay
+  my $dir = dir(io->catfile($tempdir, qw'artist')->name);
+  my @children = $dir->children;
+  is(scalar(@children), 1, 'right number of fixtures created');
+}
+
+{
+  # check dump is okay
+  my $dir = dir(io->catfile($tempdir, qw'CD')->name);
+  my @children = $dir->children;
+  is(scalar(@children), 1, 'right number of fixtures created');
+}
+
+# do dump
+ok($fixtures = DBIx::Class::Fixtures->new({ config_dir => $config_dir, debug => 0 }), 'object created with correct config dir');
+
+ok($fixtures->dump({ config => 'not-nulls.json', schema => $schema, directory => $tempdir }), 'simple dump executed okay');
 
 {
   # check dump is okay
