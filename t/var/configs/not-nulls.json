@@ -1,0 +1,16 @@
+{
+        "might_have": {
+            "fetch": 0
+        },
+        "has_many": {
+            "fetch": 0
+        },
+        "sets": [{
+            "class": "Artist",
+            "cond": { "me.name": { "!=": null } },
+            "quantity": "all",
+            "fetch": [{ 
+                "rel": "cds"
+            }]
+        }]
+}
