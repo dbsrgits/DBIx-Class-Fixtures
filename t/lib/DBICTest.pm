@@ -155,6 +155,7 @@ sub populate_schema {
         [ 2, 'Random Boy Band' ],
         [ 3, 'We Are Goth' ],
         [ 4, '' ], # Test overridden new will default name to "Test Name" using use_create => 1.
+        [ 5, undef ], # The artist formerly known as *silence*.
         [ 32948, 'Big PK' ],
     ]);
 
@@ -171,6 +172,7 @@ sub populate_schema {
         [ 4, 2, "Generic Manufactured Singles", 2001 ],
         [ 5, 2, "Unicode Chars ™ © • † ∑ α β « » → …", 2015 ],
         [ 6, 3, "Übertreibung älterer Umlaute with us", 1998 ],
+        [ 7, 5, "Cosmic Nothingness", 2016 ],
     ]);
 
     $schema->populate('Tag', [

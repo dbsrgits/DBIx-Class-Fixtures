@@ -813,7 +813,7 @@ sub dump_object {
       };
 
       my $subsre = join( '|', keys %$subs );
-      $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg;
+      $_ =~ s{__($subsre)(?:\((.+?)\))?__}{ $subs->{ $1 }->( $self, $2 ? split( /,/, $2 ) : () ) }eg if (defined $_);
 
       return $_;
     }
