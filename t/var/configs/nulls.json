@@ -7,7 +7,7 @@
         },
         "sets": [{
             "class": "Artist",
-            "cond": { "me.name": { "!=": null } },
+            "cond": { "me.name": { "=": null } },
             "quantity": "all",
             "fetch": [{ 
                 "rel": "cds"
