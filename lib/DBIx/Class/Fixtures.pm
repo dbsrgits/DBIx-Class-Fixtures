@@ -867,8 +867,8 @@ sub dump_object {
 
     # mess with dates if specified
     if ($set->{datetime_relative}) {
-      my $formatter= $object->result_source->schema->storage->datetime_parser;
-      unless ($@ || !$formatter) {
+      my $formatter= eval {$object->result_source->schema->storage->datetime_parser};
+      unless (!$formatter) {
         my $dt;
         if ($set->{datetime_relative} eq 'today') {
           $dt = DateTime->today;
