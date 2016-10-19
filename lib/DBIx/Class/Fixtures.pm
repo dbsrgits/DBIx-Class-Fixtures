@@ -644,7 +644,7 @@ sub dump {
   $tmp_output_dir->file('_config_set')->print( Dumper $config );
 
   $config->{rules} ||= {};
-  my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
+  my @sources = @{delete $config->{sets}};
 
   while ( my ($k,$v) = each %{ $config->{rules} } ) {
     if ( my $source = eval { $schema->source($k) } ) {
