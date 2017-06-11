@@ -557,7 +557,8 @@ or
  $fixtures->dump({
    all => 1, # just dump everything that's in the schema
    schema => $source_dbic_schema,
-   directory => '/home/me/app/fixtures' # output directory
+   directory => '/home/me/app/fixtures', # output directory
+   #excludes => [ qw/Foo MyView/ ], # optionally exclude certain sources
  });
 
 In this case objects will be dumped to subdirectories in the specified
@@ -567,8 +568,13 @@ directory. For example:
  /home/me/app/fixtures/artist/3.fix
  /home/me/app/fixtures/producer/5.fix
 
-schema and directory are required attributes. also, one of config or all must
+C<schema> and C<directory> are required attributes. also, one of C<config> or C<all> must
 be specified.
+
+The optional parameter C<excludes> takes an array ref of source names and can be
+used to exclue those sources when dumping the whole schema. This is useful if
+you have views in there, since those do not need fixtures and will currently result
+in an error when they are created and then used with C<populate>.
 
 Lastly, the C<config> parameter can be a Perl HashRef instead of a file name.
 If this form is used your HashRef should conform to the structure rules defined
