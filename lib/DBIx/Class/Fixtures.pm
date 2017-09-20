@@ -650,7 +650,7 @@ sub dump {
   $tmp_output_dir->file('_config_set')->print( Dumper $config );
 
   $config->{rules} ||= {};
-  my @sources = sort { $a->{class} cmp $b->{class} } @{delete $config->{sets}};
+  my @sources = @{delete $config->{sets}};
 
   while ( my ($k,$v) = each %{ $config->{rules} } ) {
     if ( my $source = eval { $schema->source($k) } ) {
@@ -880,8 +880,8 @@ sub dump_object {
 
     # mess with dates if specified
     if ($set->{datetime_relative}) {
-      my $formatter= $object->result_source->schema->storage->datetime_parser;
-      unless ($@ || !$formatter) {
+      my $formatter= eval {$object->result_source->schema->storage->datetime_parser};
+      unless (!$formatter) {
         my $dt;
         if ($set->{datetime_relative} eq 'today') {
           $dt = DateTime->today;
