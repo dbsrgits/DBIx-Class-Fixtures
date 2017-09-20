@@ -572,7 +572,7 @@ C<schema> and C<directory> are required attributes. also, one of C<config> or C<
 be specified.
 
 The optional parameter C<excludes> takes an array ref of source names and can be
-used to exclue those sources when dumping the whole schema. This is useful if
+used to exclude those sources when dumping the whole schema. This is useful if
 you have views in there, since those do not need fixtures and will currently result
 in an error when they are created and then used with C<populate>.
 
