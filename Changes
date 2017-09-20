@@ -2,9 +2,12 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+- stop sorting source names before dumping, this allows for some hackery when you need certain sources to dump first (see https://github.com/dbsrgits/DBIx-Class-Fixtures/pull/12 for details) (cngarrison++)
+- doc patch for exclude attr (simbabque++)
+
 1.001037  2017-09-20 20:42:03+00:00 UTC
 
-- ignore virtual columns in dump_object
+- ignore virtual columns in dump_object (mmims++)
 
 1.001036  2016-03-21 14:59:55+00:00 UTC
 
