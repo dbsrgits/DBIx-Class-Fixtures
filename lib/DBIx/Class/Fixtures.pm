@@ -23,7 +23,7 @@ our $namespace_counter = 0;
 __PACKAGE__->mk_group_accessors( 'simple' => qw/config_dir
     _inherited_attributes debug schema_class dumped_objects config_attrs/);
 
-our $VERSION = '1.001036';
+our $VERSION = '1.001037';
 
 $VERSION = eval $VERSION;
 
