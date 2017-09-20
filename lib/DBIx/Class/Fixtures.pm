@@ -848,7 +848,14 @@ sub dump_object {
   # write file
   unless ($exists) {
     $self->msg('-- dumping ' . "$file", 2);
-    my %ds = $object->get_columns;
+
+    # get_columns will return virtual columns; we just want stored columns.
+    # columns_info keys seems to be the actual storage column names, so we'll
+    # use that.
+    my $col_info = $src->columns_info;
+    my @column_names = keys %$col_info;
+    my %columns = $object->get_columns;
+    my %ds; @ds{@column_names} = @columns{@column_names};
 
     if($set->{external}) {
       foreach my $field (keys %{$set->{external}}) {

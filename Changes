@@ -2,6 +2,8 @@ Revision history for DBIx-Class-Fixtures
 
 {{$NEXT}}
 
+- ignore virtual columns in dump_object
+
 1.001036  2016-03-21 14:59:55+00:00 UTC
 
 - releasing as stable
@@ -102,7 +104,7 @@ Revision history for DBIx-Class-Fixtures
 
 1.001013
 - fixed functionality in last release by more deeply cloning parameters, which
-  prevents bad things when parameters get deleted in the wrong places.  Also 
+  prevents bad things when parameters get deleted in the wrong places.  Also
   be sure we clear state properly after a dump.
 
 1.001012
@@ -111,8 +113,8 @@ Revision history for DBIx-Class-Fixtures
   to make it easier when you need to dump all the fixtures programatically.
 - Added method 'dump_config_sets' to let you dump more than one set at a time
   more easily
-- Added method 'dump_all_config_sets' which helps automate dumping all your 
-  current config sets to a directory.  
+- Added method 'dump_all_config_sets' which helps automate dumping all your
+  current config sets to a directory.
 
 1.001011
 - Added an excludes resultsource option to the ->dump({all=>1,...}) feature
