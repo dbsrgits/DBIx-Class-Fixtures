@@ -63,6 +63,9 @@ foreach my $set ('simple', 'quantity', 'fetch', 'rules') {
   }
 }
 
+# Force $schema out of scope to disconnect DB so it can be deleted
+$schema = undef if ($^O eq qq{MSWin32});
+
 # use_create => 1
 $schema = DBICTest->init_schema(db_dir => $tempdir);
 $fixtures = DBIx::Class::Fixtures->new({
@@ -75,6 +78,9 @@ ok( $fixtures->dump({
 		directory => $tempdir
 	}), "use_create dump executed okay"
 );
+# Force $schema out of scope to disconnect DB so it can be deleted
+$schema = undef if ($^O eq qq{MSWin32});
+
 $schema = DBICTest->init_schema(db_dir => $tempdir, no_populate => 1 );
 $fixtures->populate({
 	directory => $tempdir,
@@ -83,8 +89,14 @@ $fixtures->populate({
 	no_deploy => 1,
 	use_create => 1
 });
+# Force $schema out of scope to disconnect DB so it can be deleted
+$schema = undef if ($^O eq qq{MSWin32});
+
 $schema = DBICTest->init_schema(db_dir => $tempdir, no_deploy => 1, no_populate => 1 );
 is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "use_create => 1 ok" );
+
+# Force $schema out of scope to disconnect DB so it can be deleted
+$schema = undef if ($^O eq qq{MSWin32});
 
 $schema = DBICTest->init_schema(db_dir => $tempdir, no_populate => 1 );
 $fixtures->populate({
