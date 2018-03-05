@@ -103,3 +103,15 @@ $fixtures->populate({
 	use_find_or_create => 1
 });
 is( $schema->resultset( "Artist" )->find({ artistid => 4 })->name, "Test Name", "idempotent use_find_or_create => 1 ok" );
+# Update the existing record to something else, and then check that it gets
+# updated to the original fixture value with update_existing
+$schema->resultset( "Artist" )->find({ artistid => 3 })->update({ name => "We Are Goth2" });
+$fixtures->populate({
+	directory => $tempdir,
+	connection_details => ['dbi:SQLite:'.io->catfile($tempdir, qw[ DBIxClass.db ])->name, '', ''],
+	schema => $schema,
+	no_deploy => 1,
+	use_find_or_create => 1,
+        update_existing => 1
+});
+is( $schema->resultset( "Artist" )->find({ artistid => 3 })->name, "We Are Goth", "update_existing => 1 ok" );
