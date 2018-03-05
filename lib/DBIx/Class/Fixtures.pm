@@ -511,6 +511,7 @@ sub new {
               dumped_objects        => {},
               use_create            => $params->{use_create} || 0,
               use_find_or_create    => $params->{use_find_or_create} || 0,
+              update_existing       => $params->{update_existing} || 0,
               config_attrs          => $params->{config_attrs} || {},
   };
 
@@ -1209,6 +1210,11 @@ sub dump_all_config_sets {
    # Useful if you are populating a persistent data store.
    use_find_or_create => 0,
 
+   # optional, use in conjunction with use_find_or_create to update existing
+   # records with the updated fixture where they can already be found with
+   # find_or_create
+   update_existing => 0,
+
    # Dont try to clean the database, just populate over whats there. Requires
    # schema option. Use this if you want to handle removing old data yourself
    # no_deploy => 1
@@ -1397,7 +1403,8 @@ sub populate {
           if ( $params->{use_create} ) {
             $rs->create( $HASH1 );
           } elsif( $params->{use_find_or_create} ) {
-            $rs->find_or_create( $HASH1 );
+            my $row = $rs->find_or_create( $HASH1 );
+            $row->update($HASH1) if $params->{update_existing};
           } else {
             push(@rows, $HASH1);
           }
