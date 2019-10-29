@@ -6,7 +6,7 @@ use warnings;
 use DBIx::Class 0.08100;
 use DBIx::Class::Exception;
 use Class::Accessor::Grouped;
-use Config::Any::JSON;
+use Config::Any::YAML;
 use Data::Dump::Streamer;
 use Data::Visitor::Callback;
 use Hash::Merge qw( merge );
@@ -738,7 +738,7 @@ sub load_config_file {
   DBIx::Class::Exception->throw("config does not exist at $config_file")
     unless -e "$config_file";
 
-  my $config = Config::Any::JSON->load($config_file);
+  my $config = Config::Any::YAML->load($config_file);
 
   #process includes
   if (my $incs = $config->{includes}) {
@@ -757,7 +757,7 @@ sub load_config_file {
       DBIx::Class::Exception->throw("config does not exist at $include_file")
         unless -e "$include_file";
 
-      my $include = Config::Any::JSON->load($include_file);
+      my $include = Config::Any::YAML->load($include_file);
       $self->msg($include);
       $config = merge( $config, $include );
     }
